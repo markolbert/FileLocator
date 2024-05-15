@@ -1,6 +1,6 @@
 ﻿namespace J4JSoftware.FileUtilities;
 
-public class SsmcLglException(
+public class FileUtilityException(
     Type type,
     string methodName,
     string mesg,
