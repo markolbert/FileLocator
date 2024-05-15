@@ -1,10 +1,9 @@
 ﻿using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging;
-using Org.BouncyCastle.Asn1.Ocsp;
 
 namespace J4JSoftware.FileUtilities;
 
-public static partial class FileLogExtensions
+internal static partial class FileLogExtensions
 {
     [LoggerMessage(Level = LogLevel.Error,
                    Message = "{caller}: File '{file}' not found")]

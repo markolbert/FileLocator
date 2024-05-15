@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
 
-public static partial class TypeLogExtensions
+internal static partial class TypeLogExtensions
 {
     [LoggerMessage(LogLevel.Error, Message = "{caller}: Supplied {type} is not assignable to {correctType}")]
     public static partial void InvalidTypeAssignment(this ILogger logger, Type type, Type correctType, [CallerMemberName] string caller = "");

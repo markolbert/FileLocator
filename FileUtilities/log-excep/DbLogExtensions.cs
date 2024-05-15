@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
 
-public static partial class DbLogExtensions
+internal static partial class DbLogExtensions
 {
     [LoggerMessage(Level = LogLevel.Error, Message = "{caller}: Some database entities were not configured: {types}")]
     public static partial void EntitiesNotConfigured(this ILogger logger, string types, [CallerMemberName] string caller = "");

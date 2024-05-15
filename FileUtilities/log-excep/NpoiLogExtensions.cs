@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
 
-public static partial class NpoiLogExtensions
+internal static partial class NpoiLogExtensions
 {
     [LoggerMessage(Level = LogLevel.Error, Message = "{caller}: ISheet is not defined")]
     public static partial void UndefinedSheet(this ILogger logger, [CallerMemberName] string caller = "");

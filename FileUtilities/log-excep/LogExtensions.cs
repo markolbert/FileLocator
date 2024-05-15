@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
 
-public static partial class LogExtensions
+internal static partial class LogExtensions
 {
     [LoggerMessage(LogLevel.Information, Message = "{caller}: {text}")]
     public static partial void Information(this ILogger logger, string text, [CallerMemberName] string caller = "");
