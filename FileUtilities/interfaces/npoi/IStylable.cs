@@ -1,6 +1,4 @@
-﻿using NPOI.SS.UserModel;
-
-namespace J4JSoftware.FileUtilities;
+﻿namespace J4JSoftware.FileUtilities;
 
 public interface IStylable
 {

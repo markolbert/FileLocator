@@ -35,7 +35,7 @@ internal class StyleSetCollection<TStyle>
         }
     }
 
-    public StyleSetCollection<TStyle> Copy() => new StyleSetCollection<TStyle>( this );
+    public StyleSetCollection<TStyle> Copy() => new( this );
 
     public void AddStyle( string name, TStyle style, Type? defaultForType = null )
     {

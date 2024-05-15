@@ -157,31 +157,11 @@ public class StyleSets : IStyleSets
         if( styleSet == null )
             return null;
 
-        //if( styleSet is DoubleStyleSet dblSet && dblSet.IsPercent )
-        //    return null;
-
-        //if( styleSet is DoubleStyleSet )
-        //    System.Diagnostics.Debugger.Break();
-
         var matches = _cachedStyles.Where(x => x.StyleSet.ValuesEqual(styleSet))
                                    .ToList();
 
         if (matches.Count > 0)
             return matches.First().CellStyle;
-
-        //*** useful for debugging!!! ***
-
-        //if( styleSet is IntegerStyleSet )
-        //{
-        //    foreach( var cachedStyle in _cachedStyles.Where( cs => cs.StyleSet is IntegerStyleSet ) )
-        //    {
-        //        var compareLogic = new CompareLogic();
-        //        var compareResult = compareLogic.Compare(styleSet, cachedStyle.StyleSet);
-
-        //        if( !compareResult.AreEqual )
-        //            System.Diagnostics.Debugger.Break();
-        //    }
-        //}
 
         var retVal = styleSet.CreateCellStyle(workbook);
         _cachedStyles.Add(new ResolvedStyle(styleSet, retVal));
@@ -189,7 +169,7 @@ public class StyleSets : IStyleSets
         return retVal;
     }
 
-    public StyleSetBase this[ string name ] => _namedStyles.TryGetValue( name, out var retVal ) ? retVal : DefaultBase;
+    public StyleSetBase this[ string name ] => _namedStyles.GetValueOrDefault( name, DefaultBase );
 
     public StyleSetBase this[ Type type ] =>
         _typedStyles.TryGetValue( type, out var retVal ) ? retVal : GetDefaultForType( type );

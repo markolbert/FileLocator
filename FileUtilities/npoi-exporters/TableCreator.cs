@@ -33,7 +33,7 @@ public class TableCreator<TEntity>(
     public ReadOnlyCollection<IExportableColumn> Columns => _columns.AsReadOnly();
 
     public List<TEntity> Data { get; } = entities.ToList();
-    public int NumDataRows => Data.Count();
+    public int NumDataRows => Data.Count;
     public int NumColumnsDefined => _columns.Count;
 
     public int FreezeColumn { get; private set; }

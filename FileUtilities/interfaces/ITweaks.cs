@@ -8,7 +8,7 @@ public interface ITweaks
     ReadOnlyDictionary<int, Tweak> Collection { get; }
     bool AllComplete { get; }
 
-    ITableSource? Source { get; set; }
+    IFileContext? Source { get; set; }
 
     bool Load();
 
