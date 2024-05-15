@@ -20,7 +20,11 @@ public class DataRecord( int recNum )
     {
         value = null;
 
-        return _fieldValues.TryGetValue( fieldNum, out var retVal );
+        if( !_fieldValues.TryGetValue( fieldNum, out var retVal ) )
+            return false;
+
+        value = retVal.Value;
+        return true;
     }
 
     public bool TrySetValue( int fieldNum, string value )

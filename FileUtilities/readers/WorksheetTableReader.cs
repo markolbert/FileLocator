@@ -17,7 +17,6 @@ public class WorksheetTableReader<TEntity> : IWorksheetTableReader<TEntity>
     private IWorkbookFileInfo? _source;
 
     public WorksheetTableReader(
-        Configuration config,
         IRecordFilter<TEntity>? filter = null,
         IKeyedEntityUpdater<TEntity>? entityUpdater = null,
         ILoggerFactory? loggerFactory = null
@@ -26,15 +25,12 @@ public class WorksheetTableReader<TEntity> : IWorksheetTableReader<TEntity>
         LoggerFactory = loggerFactory;
         Logger = LoggerFactory?.CreateLogger( GetType() );
 
-        Configuration = config;
         _filter = filter;
         _entityUpdater = entityUpdater;
     }
 
     protected ILoggerFactory? LoggerFactory { get; }
     protected ILogger? Logger { get; }
-
-    protected Configuration Configuration { get; }
 
     public Type ImportedType => typeof( TEntity );
 
@@ -255,7 +251,7 @@ public class WorksheetTableReader<TEntity> : IWorksheetTableReader<TEntity>
             return true;
         }
 
-        Logger?.UnexpectedType(typeof(ITableSource), source.GetType());
+        Logger?.UnexpectedType(typeof(IFileContext), source.GetType());
         return false;
     }
 }
