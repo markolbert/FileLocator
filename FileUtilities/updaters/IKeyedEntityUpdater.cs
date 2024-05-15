@@ -5,7 +5,7 @@ public interface IKeyedEntityUpdater
     IUpdateRecorder UpdateRecorder { get; }
     Type EntityType { get; }
 
-    ITableSource? Source { get; set; }
+    IFileContext? Source { get; set; }
     bool Initialize();
 
     void ProcessEntityFields( object entity );

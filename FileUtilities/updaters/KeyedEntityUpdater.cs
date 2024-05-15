@@ -8,7 +8,7 @@ public class KeyedEntityUpdater<TEntity> : IKeyedEntityUpdater<TEntity>
 {
     private readonly List<IFieldUpdater> _fieldProcessors = [];
 
-    private ITableSource? _source;
+    private IFileContext? _source;
 
     protected KeyedEntityUpdater(
         IUpdateRecorder updateRecorder,
@@ -31,7 +31,7 @@ public class KeyedEntityUpdater<TEntity> : IKeyedEntityUpdater<TEntity>
     public IUpdateRecorder UpdateRecorder { get; }
     public Type EntityType => typeof( TEntity );
 
-    public ITableSource? Source
+    public IFileContext? Source
     {
         get => _source;
 
