@@ -1,6 +1,6 @@
 ﻿namespace J4JSoftware.FileUtilities;
 
-public interface ICsvFileInfo : IFileContext
+public interface ICsvContext : IFileContext
 {
     bool HasHeader { get; }
 }
