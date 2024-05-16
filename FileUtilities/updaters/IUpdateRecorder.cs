@@ -1,4 +1,6 @@
-﻿namespace J4JSoftware.FileUtilities;
+﻿using Microsoft.EntityFrameworkCore;
+
+namespace J4JSoftware.FileUtilities;
 
 public interface IUpdateRecorder
 {
@@ -7,4 +9,9 @@ public interface IUpdateRecorder
     bool MarkAsInvalid( Type entityType, int keyValue, string fieldName, string? fieldValue );
 
     bool SaveChanges();
+}
+
+public interface IUpdateRecorder<TDb> : IUpdateRecorder
+    where TDb: DbContext
+{
 }
