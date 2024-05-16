@@ -2,6 +2,6 @@
 
 public interface IFileContext
 {
-    string FilePath { get; }
+    string FilePath { get; set; }
     string Scope { get; }
 }

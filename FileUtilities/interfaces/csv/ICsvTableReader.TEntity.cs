@@ -3,5 +3,5 @@
 public interface ICsvTableReader<out TEntity> : ITableReader, IEnumerable<TEntity>
     where TEntity : class, new()
 {
-    ICsvFileInfo? Source { get; set; }
+    ICsvContext? Source { get; set; }
 }

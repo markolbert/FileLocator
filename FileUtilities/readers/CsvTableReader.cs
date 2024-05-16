@@ -10,7 +10,7 @@ public class CsvTableReader : ICsvTableReader
     private readonly IRecordFilter<DataRecord>? _filter;
     private readonly IKeyedEntityUpdater<DataRecord>? _entityUpdater;
 
-    private ICsvFileInfo? _source;
+    private ICsvContext? _source;
     private FileStream? _fs;
     private StreamReader? _reader;
 
@@ -35,7 +35,7 @@ public class CsvTableReader : ICsvTableReader
 
     public Type ImportedType => typeof( DataRecord );
 
-    public ICsvFileInfo? Source
+    public ICsvContext? Source
     {
         get => _source;
 
@@ -156,7 +156,7 @@ public class CsvTableReader : ICsvTableReader
 
     bool ITableReader.SetSource(object source)
     {
-        if (source is ICsvFileInfo castSource)
+        if (source is ICsvContext castSource)
         {
             Source = castSource;
             return true;

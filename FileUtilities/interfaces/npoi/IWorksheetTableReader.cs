@@ -5,7 +5,7 @@ namespace J4JSoftware.FileUtilities;
 public interface IWorksheetTableReader<TEntity> : ITableReader, IEnumerable<TEntity>
     where TEntity : class, new()
 {
-    IWorkbookFileInfo? Source { get; set; }
+    IWorkbookContext? Source { get; set; }
 
      void AddMapping( int colNum, string colNameInSheet, Expression<Func<TEntity, double>> propExpr );
      void AddMapping( int colNum, string colNameInSheet, Expression<Func<TEntity, int>> propExpr );

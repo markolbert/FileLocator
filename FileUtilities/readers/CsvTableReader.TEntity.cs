@@ -13,7 +13,7 @@ public class CsvTableReader<TEntity> : ICsvTableReader<TEntity>
     private readonly IRecordFilter<TEntity>? _filter;
     private readonly IKeyedEntityUpdater<TEntity>? _entityUpdater;
 
-    private ICsvFileInfo? _source;
+    private ICsvContext? _source;
     private FileStream? _fs;
     private StreamReader? _reader;
     private CsvReader? _csvReader;
@@ -36,7 +36,7 @@ public class CsvTableReader<TEntity> : ICsvTableReader<TEntity>
 
     public Type ImportedType => typeof( TEntity );
 
-    public ICsvFileInfo? Source
+    public ICsvContext? Source
     {
         get => _source;
 
@@ -155,13 +155,13 @@ public class CsvTableReader<TEntity> : ICsvTableReader<TEntity>
 
     bool ITableReader.SetSource( object source )
     {
-        if( source is ICsvFileInfo castSource )
+        if( source is ICsvContext castSource )
         {
             Source = castSource;
             return true;
         }
 
-        Logger?.UnexpectedType(typeof(ICsvFileInfo), source.GetType());
+        Logger?.UnexpectedType(typeof(ICsvContext), source.GetType());
         return false;
     }
 }
