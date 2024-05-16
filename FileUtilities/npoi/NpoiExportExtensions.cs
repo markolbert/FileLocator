@@ -3,7 +3,7 @@ using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
 
-public static class ExportExtensions
+public static class NpoiExportExtensions
 {
     private static ITableCreatorInternal<TEntity> CastToInternal<TEntity>( this ITableCreator<TEntity> instance )
         where TEntity : class
@@ -11,7 +11,7 @@ public static class ExportExtensions
         if( instance is ITableCreatorInternal<TEntity> retVal )
             return retVal;
 
-        throw new FileUtilityException( typeof( ExportExtensions ),
+        throw new FileUtilityException( typeof( NpoiExportExtensions ),
                                     nameof( CastToInternal ),
                                     $"{nameof( instance )} is not an instance of {typeof( ITableCreatorInternal )}" );
     }

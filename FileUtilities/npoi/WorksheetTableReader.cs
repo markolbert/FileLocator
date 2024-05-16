@@ -14,7 +14,7 @@ public class WorksheetTableReader<TEntity> : IWorksheetTableReader<TEntity>
     private readonly IRecordFilter<TEntity>? _filter;
     private readonly IKeyedEntityUpdater<TEntity>? _entityUpdater;
 
-    private IWorkbookContext? _source;
+    private IWorksheetContext? _source;
 
     public WorksheetTableReader(
         IRecordFilter<TEntity>? filter = null,
@@ -34,7 +34,7 @@ public class WorksheetTableReader<TEntity> : IWorksheetTableReader<TEntity>
 
     public Type ImportedType => typeof( TEntity );
 
-    public IWorkbookContext? Source
+    public IWorksheetContext? Source
     {
         get => _source;
 
@@ -245,7 +245,7 @@ public class WorksheetTableReader<TEntity> : IWorksheetTableReader<TEntity>
 
     bool ITableReader.SetSource(object source)
     {
-        if (source is IWorkbookContext castSource)
+        if (source is IWorksheetContext castSource)
         {
             Source = castSource;
             return true;

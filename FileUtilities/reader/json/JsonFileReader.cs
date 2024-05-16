@@ -3,10 +3,10 @@ using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
 
-public class JsonFileParser<TFile>( ILoggerFactory? loggerFactory ) : IJsonFileParser<TFile>
+public class JsonFileReader<TFile>( ILoggerFactory? loggerFactory ) : IJsonFileParser<TFile>
     where TFile : class
 {
-    private readonly ILogger? _logger = loggerFactory?.CreateLogger<JsonFileParser<TFile>>();
+    private readonly ILogger? _logger = loggerFactory?.CreateLogger<JsonFileReader<TFile>>();
 
     public JsonSerializerOptions SerializerOptions { get; } = new();
 

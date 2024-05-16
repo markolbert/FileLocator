@@ -1,6 +1,6 @@
 ﻿namespace J4JSoftware.FileUtilities;
 
-public interface IWorksheetSource : IFileContext
+public interface IWorksheetContext : IFileContext
 {
     string SheetName { get; }
 }

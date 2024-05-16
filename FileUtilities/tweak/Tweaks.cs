@@ -93,7 +93,7 @@ public class Tweaks<TEntity> : ITweaks<TEntity>
             return false;
         }
 
-        var parser = new MultiRecordJsonFileParser<Tweak>( _loggerFactory );
+        var parser = new MultiRecordJsonFileReader<Tweak>( _loggerFactory );
         parser.SerializerOptions.Converters.Add( new JsonTweakConverter<TEntity>( this, _loggerFactory ) );
 
         if( !parser.LoadFile( tableSource.TweakPath ) )

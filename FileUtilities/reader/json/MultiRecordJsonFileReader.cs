@@ -3,10 +3,10 @@ using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
 
-public class MultiRecordJsonFileParser<TRecord>( ILoggerFactory? loggerFactory ) : IJsonFileParser<IEnumerable<TRecord>>
+public class MultiRecordJsonFileReader<TRecord>( ILoggerFactory? loggerFactory ) : IJsonFileParser<IEnumerable<TRecord>>
     where TRecord : class
 {
-    private readonly ILogger? _logger = loggerFactory?.CreateLogger<MultiRecordJsonFileParser<TRecord>>();
+    private readonly ILogger? _logger = loggerFactory?.CreateLogger<MultiRecordJsonFileReader<TRecord>>();
 
     private FileStream? _fs;
 

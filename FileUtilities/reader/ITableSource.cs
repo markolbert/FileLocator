@@ -12,6 +12,6 @@ public interface ICsvTableSource : ITableSource, ICsvContext
 {
 }
 
-public interface IWorksheetTableSource : ITableSource, IWorkbookContext
+public interface IWorksheetTableSource : ITableSource, IWorksheetContext
 {
 }
