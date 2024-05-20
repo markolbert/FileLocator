@@ -16,9 +16,18 @@ public class ExportableVector<TEntity, TProp> : ExportableColumnBase, IExportabl
         StyleSetBase styleSet,
         ILoggerFactory? loggerFactory
     )
-        : base( typeof( TEntity ), typeof( TProp ), propExpr.GetPropertyInfo().Name, tableCreator, styleSet, loggerFactory )
+        : base( typeof( TEntity ), typeof( TProp ), tableCreator, styleSet, loggerFactory )
     {
         _getter = propExpr.Compile();
+
+        var exprHelper = new ExpressionHelpers( LoggerFactory );
+
+        if( !exprHelper.TryGetPropertyInfo( propExpr, out var propInfo ) )
+        {
+            Logger?.UnboundProperty( GetType(), propExpr.ToString(), "Unknown" );
+            BoundProperty = "Unknown";
+        }
+        else BoundProperty = propInfo!.Name;
 
         ColumnsNeeded = TableCreator.Data.Max( r => _getter( r ).Count );
     }

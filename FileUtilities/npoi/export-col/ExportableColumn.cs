@@ -5,34 +5,38 @@ using NPOI.SS.UserModel;
 
 namespace J4JSoftware.FileUtilities;
 
-public class ExportableColumn<TEntity, TProp>(
-    ITableCreator<TEntity> tableCreator,
-    Expression<Func<TEntity, TProp?>> propExpr,
-    StyleSetBase styleSet,
-    ILoggerFactory? loggerFactory
-)
-    : ExportableColumnBase( typeof( TEntity ),
-                            typeof( TProp ),
-                            GetBoundPropertyName( propExpr ),
-                            tableCreator,
-                            styleSet,
-                            loggerFactory ),
+public class ExportableColumn<TEntity, TProp> : ExportableColumnBase,
         IExportableColumn<TEntity, TProp>
     where TEntity : class
 {
-    private static string GetBoundPropertyName( Expression<Func<TEntity, TProp?>> propExpr )
-    {
-        try
-        {
-            return propExpr.GetPropertyInfo().Name;
-        }
-        catch( Exception )
-        {
-            return "Unknown";
-        }
-    }
+    private readonly Func<TEntity, TProp?> _getter;
 
-    private readonly Func<TEntity, TProp?> _getter = propExpr.Compile();
+    private readonly Expression<Func<TEntity, TProp?>> _propExpr;
+
+    public ExportableColumn(
+        ITableCreator<TEntity> tableCreator,
+        Expression<Func<TEntity, TProp?>> propExpr,
+        StyleSetBase styleSet,
+        ILoggerFactory? loggerFactory
+    )
+        : base( typeof( TEntity ),
+                typeof( TProp ),
+                tableCreator,
+                styleSet,
+                loggerFactory )
+    {
+        _propExpr = propExpr;
+        _getter = propExpr.Compile();
+
+        var exprHelper = new ExpressionHelpers( LoggerFactory );
+
+        if( !exprHelper.TryGetPropertyInfo( propExpr, out var propInfo ) )
+        {
+            Logger?.UnboundProperty( GetType(), propExpr.ToString(), "Unknown" );
+            BoundProperty = "Unknown";
+        }
+        else BoundProperty = propInfo!.Name;
+    }
 
     public ITableCreator<TEntity> TableCreator => (ITableCreator<TEntity>) Creator;
 

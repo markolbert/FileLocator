@@ -22,10 +22,19 @@ public record ImportedColumn<TEntity, TProp> : IImportedColumn
         ColumnNumber = colNum;
         ColumnNameInSheet = colNameInSheet;
 
-        var propInfo = propExpr.GetPropertyInfo();
-        PropertyName = propInfo.Name;
+        var exprHelper = new ExpressionHelpers( loggerFactory );
 
-        _setter = ( e, v ) => propInfo.SetValue( e, v );
+        if( !exprHelper.TryGetPropertyInfo( propExpr, out var propInfo ) )
+        {
+            _logger?.UnboundProperty( GetType(), propExpr.ToString(), "Unknown" );
+            PropertyName = "Unknown";
+        }
+        else PropertyName = propInfo!.Name;
+
+        _setter = exprHelper.CreateObjectPropertySetter( propExpr )
+         ?? throw new FileUtilityException( GetType(),
+                                            "ctor",
+                                            $"Could not create property setter from '{propExpr}'" );
     }
 
     public int ColumnNumber { get; }
@@ -49,7 +58,7 @@ public record ImportedColumn<TEntity, TProp> : IImportedColumn
             switch( Type.GetTypeCode( typeof( TProp ) ) )
             {
                 case TypeCode.Boolean:
-                    _setter( entity, cell.BooleanCellValue );
+                    _setter( entity, cell.BooleanCellValue);
                     break;
 
                 case TypeCode.DateTime:

@@ -247,5 +247,22 @@ internal static partial class InternalLogMessages
         [CallerMemberName] string caller = ""
     );
 
+    [LoggerMessage(LogLevel.Error, "{caller}: {bindingType} cannot bind to property name from {propExpr}, defaulting to '{defaultName}'")]
+    internal static partial void UnboundProperty(
+        this ILogger logger,
+        Type bindingType,
+        string propExpr,
+        string defaultName,
+        [ CallerMemberName ] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Warning, "{caller}: Header type {headerType} is not supported for {colType}, ignoring")]
+    internal static partial void UnsupportedHeader(
+        this ILogger logger,
+        Type headerType,
+        Type colType,
+        [ CallerMemberName ] string caller = ""
+    );
+
     #endregion
 }

@@ -8,7 +8,6 @@ public abstract class ExportableColumnBase : Stylable, IExportableColumn
     protected ExportableColumnBase(
         Type entityType, 
         Type propType, 
-        string propName,
         ITableCreator creator, 
         StyleSetBase styleSet, 
         ILoggerFactory? loggerFactory
@@ -17,16 +16,18 @@ public abstract class ExportableColumnBase : Stylable, IExportableColumn
     {
         EntityType = entityType;
         PropertyType = propType;
-        BoundProperty = propName;
+
+        LoggerFactory = loggerFactory;
         Logger = loggerFactory?.CreateLogger( GetType() );
     }
 
+    protected ILoggerFactory? LoggerFactory { get; }
     protected ILogger? Logger { get; }
 
     public Type EntityType { get; }
     public Type PropertyType { get; }
 
-    public string BoundProperty { get; }
+    public string BoundProperty { get; init; } = null!;
     public abstract int ColumnsNeeded { get; }
     public List<IHeaderCreator> HeaderCreators { get; } = [];
 
