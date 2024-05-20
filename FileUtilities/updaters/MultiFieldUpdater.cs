@@ -28,25 +28,25 @@ public record MultiFieldUpdater<TEntity, TSrcProp, TTgtProp> : IFieldUpdater
     {
         _logger = loggerFactory?.CreateLogger( GetType() );
 
-        var uniqueKeyPropInfo = keyPropExpr.GetPropertyInfo();
-#pragma warning disable CS8605 // Unboxing a possibly null value.
-        _keyGetter = x => (int) uniqueKeyPropInfo.GetValue( x );
-#pragma warning restore CS8605 // Unboxing a possibly null value.
+        _keyGetter = keyPropExpr.Compile();
+        _srcPropGetter = srcPropExpr.Compile();
 
-        var srcPropInfo = srcPropExpr.GetPropertyInfo();
-#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
-        _srcPropGetter = x => (TSrcProp) srcPropInfo.GetValue( x );
-#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
+        var exprHelper = new ExpressionHelpers(loggerFactory);
 
-        var tgtPropInfo = tgtPropExpr.GetPropertyInfo();
-        FieldName = tgtPropInfo.Name;
+        if( exprHelper.TryGetPropertyInfo( tgtPropExpr, out var propInfo ) )
+            FieldName = propInfo!.Name;
+        else
+        {
+            _logger?.UnboundProperty(GetType(), tgtPropExpr.ToString(), "Unknown");
+            FieldName = "Unknown";
+        }
 
-#pragma warning disable CS8603 // Possible null reference return.
-#pragma warning disable CS8600 // Converting null literal or possible null value to non-nullable type.
-        _tgtPropGetter = x => (TTgtProp) tgtPropInfo.GetValue( x );
-#pragma warning restore CS8600 // Converting null literal or possible null value to non-nullable type.
-#pragma warning restore CS8603 // Possible null reference return.
-        _tgtPropSetter = ( x, y ) => tgtPropInfo.SetValue( x, y );
+        _tgtPropGetter = tgtPropExpr.Compile();
+
+        _tgtPropSetter = exprHelper.CreatePropertySetter( tgtPropExpr )
+         ?? throw new FileUtilityException( GetType(),
+                                            "ctor",
+                                            $"Could not create target property setter from {tgtPropExpr}" );
 
         UpdateRecorder = updateRecorder;
         _isCleaner = isCleaner;
