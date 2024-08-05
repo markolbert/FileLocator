@@ -19,10 +19,8 @@ public static class NpoiExportExtensions
     public static ITableCreator<TEntity> SheetName<TEntity>( this ITableCreator<TEntity> tableCreator, string name )
         where TEntity : class
     {
-        if( tableCreator.WorkbookCreator is not IWorkbookCreatorInternal internalWorkbook )
-            return tableCreator;
+        tableCreator.SheetName = name;
 
-        internalWorkbook.ChangeSheetName( tableCreator.SheetName, name );
         return tableCreator;
     }
 

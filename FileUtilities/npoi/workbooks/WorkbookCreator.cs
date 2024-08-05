@@ -1,14 +1,8 @@
-﻿using System.Collections.ObjectModel;
-using Microsoft.Extensions.Logging;
+﻿using Microsoft.Extensions.Logging;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 
 namespace J4JSoftware.FileUtilities;
-
-internal class SheetCollection() : KeyedCollection<string, ISheetCreator>( StringComparer.OrdinalIgnoreCase )
-{
-    protected override string GetKeyForItem( ISheetCreator item ) => item.SheetName;
-}
 
 public class WorkbookCreator(
     StyleConfiguration styleConfig,
@@ -28,30 +22,7 @@ public class WorkbookCreator(
         set => _sheetSequence = value;
     }
 
-    //TODO: names not being set when sheet hasn't been named already
-    void IWorkbookCreatorInternal.ChangeSheetName( string oldName, string newName )
-    {
-        if( oldName.Equals( newName, StringComparison.OrdinalIgnoreCase ) )
-            return;
-
-        // avoid name collisions
-        if( _sheetCreators.TryGetValue( newName, out _ ) )
-        {
-            _logger?.DuplicateSheetName( newName );
-            return;
-        }
-
-        if( !_sheetCreators.TryGetValue( oldName, out var sheetCreator ) )
-        {
-            _logger?.UndefinedSheetName( oldName );
-            return;
-        }
-
-        sheetCreator.SheetName = newName;
-
-        _sheetCreators.Remove( oldName );
-        _sheetCreators.Add( sheetCreator );
-    }
+    SheetCollection IWorkbookCreatorInternal.SheetCreators => _sheetCreators;
 
     public ILoggerFactory? LoggerFactory { get; } = loggerFactory;
 
@@ -59,10 +30,6 @@ public class WorkbookCreator(
         where TEntity : class
     {
         var retVal = new TableCreator<TEntity>( entities, this, styleConfig, LoggerFactory );
-
-        if( string.IsNullOrEmpty( retVal.SheetName ) )
-            retVal.SheetName = $"Sheet{_sheetCreators.Count + 1}";
-
         _sheetCreators.Add( retVal );
 
         return retVal;

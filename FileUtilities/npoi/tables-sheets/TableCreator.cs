@@ -7,32 +7,47 @@ using NPOI.XSSF.UserModel;
 
 namespace J4JSoftware.FileUtilities;
 
-public class TableCreator<TEntity>(
-    IEnumerable<TEntity> entities,
-    IWorkbookCreator workbookCreator,
-    StyleConfiguration styleConfig,
-    ILoggerFactory? loggerFactory
-)
-    : ITableCreator<TEntity>, ITableCreatorInternal<TEntity>
+public class TableCreator<TEntity> : ITableCreator<TEntity>, ITableCreatorInternal<TEntity>
     where TEntity : class
 {
-    private readonly ILogger? _logger = workbookCreator.LoggerFactory?.CreateLogger<TableCreator<TEntity>>();
+    private readonly ILogger? _logger;
     private readonly List<IExportableColumn> _columns = [];
     private readonly List<TitleRow> _titleRows = [];
     private readonly Dictionary<string, NamedRangeScope> _namedRanges = new( StringComparer.OrdinalIgnoreCase );
 
     private int _firstDataRow;
 
+    public TableCreator(IEnumerable<TEntity> entities,
+        IWorkbookCreator workbookCreator,
+        StyleConfiguration styleConfig,
+        ILoggerFactory? loggerFactory)
+    {
+        _logger = workbookCreator.LoggerFactory?.CreateLogger<TableCreator<TEntity>>();
+
+        StyleSets = new StyleSets( styleConfig, loggerFactory );
+        WorkbookCreator = workbookCreator;
+        LoggerFactory = workbookCreator.LoggerFactory;
+        Data = entities.ToList();
+
+        // set default sheet name
+        if( workbookCreator is not IWorkbookCreatorInternal internalWorkbook )
+            throw new FileUtilityException( GetType(),
+                                            "ctor",
+                                            $"{nameof( workbookCreator )} parameter is not a {nameof( IWorkbookCreatorInternal )}" );
+
+        SheetName = $"Sheet{internalWorkbook.SheetCreators.Count + 1}";
+    }
+
     public Type EntityType => typeof( TEntity );
-    public IStyleSets StyleSets { get; } = new StyleSets( styleConfig, loggerFactory );
-    public IWorkbookCreator WorkbookCreator { get; } = workbookCreator;
-    public ILoggerFactory? LoggerFactory { get; } = workbookCreator.LoggerFactory;
+    public IStyleSets StyleSets { get; }
+    public IWorkbookCreator WorkbookCreator { get; }
+    public ILoggerFactory? LoggerFactory { get; }
 
     public ISheet? Sheet { get; private set; }
-    public string SheetName { get; set; } = string.Empty;
+    public string SheetName { get; set; }
     public ReadOnlyCollection<IExportableColumn> Columns => _columns.AsReadOnly();
 
-    public List<TEntity> Data { get; } = entities.ToList();
+    public List<TEntity> Data { get; }
     public int NumDataRows => Data.Count;
     public int NumColumnsDefined => _columns.Count;
 
