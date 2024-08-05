@@ -28,6 +28,7 @@ public class WorkbookCreator(
         set => _sheetSequence = value;
     }
 
+    //TODO: names not being set when sheet hasn't been named already
     void IWorkbookCreatorInternal.ChangeSheetName( string oldName, string newName )
     {
         if( oldName.Equals( newName, StringComparison.OrdinalIgnoreCase ) )
