@@ -4,3 +4,7 @@ public interface IWorksheetContext : IFileContext
 {
     string SheetName { get; }
 }
+
+public interface IWorksheetTableSource : ITableSource, IWorksheetContext
+{
+}

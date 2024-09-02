@@ -4,3 +4,7 @@ public interface ICsvContext : IFileContext
 {
     bool HasHeader { get; }
 }
+
+public interface ICsvTableSource : ITableSource, ICsvContext
+{
+}
