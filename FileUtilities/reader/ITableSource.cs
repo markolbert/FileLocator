@@ -7,11 +7,3 @@ public interface ITableSource : IFileContext
 
     string? TweakPath { get; set; }
 }
-
-public interface ICsvTableSource : ITableSource, ICsvContext
-{
-}
-
-public interface IWorksheetTableSource : ITableSource, IWorksheetContext
-{
-}
