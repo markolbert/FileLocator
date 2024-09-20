@@ -56,6 +56,8 @@ public interface IFileResolver
 
 A default implementation of `IFileResolver` is provided by the `FileResolver` class. By default, it treats finding multiple matching file names in the directories it searches as an error (i.e., it assumes the file name is unique within its scope), but you can override that behavior by specifying `FileResolution.SingleFile` for the `resolution` parameter. Not finding a match is always an error.
 
+## 
+
 ## Defining the Target Entity
 
 By itself a file context isn't terribly useful, because while it describes how to find a file to read, it doesn't describe the entities you want to create when you read the tabular data (which would be a single line in a CSV file, or a single row in Excel tabular data).
