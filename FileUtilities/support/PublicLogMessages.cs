@@ -22,6 +22,21 @@ public static partial class PublicLogMessages
         [CallerMemberName] string caller = ""
     );
 
+    [LoggerMessage(LogLevel.Warning, "{caller}: Unsupported {enumType} value '{value}'")]
+    public static partial void SkippingEnumValue(
+        this ILogger logger,
+        Type enumType,
+        string value,
+        [CallerMemberName] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Warning, "{caller}: {type} is not supported")]
+    public static partial void UnsupportedType(
+        this ILogger logger,
+        Type type,
+        [CallerMemberName] string caller = ""
+    );
+
     [LoggerMessage(LogLevel.Warning, Message = "{caller}: Duplicate {type} '{value}', skipping")]
     public static partial void SkippedDuplicate(this ILogger logger, Type type, string value, [CallerMemberName] string caller = "");
 
@@ -112,6 +127,13 @@ public static partial class PublicLogMessages
 
     [LoggerMessage(LogLevel.Warning, "{caller}: {entityType}::{propName} is not tweakable")]
     public static partial void PropertyNotTweakable(this ILogger logger, string entityType, string propName, [CallerMemberName] string caller = "");
+
+    [LoggerMessage(LogLevel.Error, "{caller}: {dbContextType} is not defined")]
+    public static partial void UndefinedDatabase(
+        this ILogger logger,
+        Type dbContextType,
+        [CallerMemberName] string caller = ""
+    );
 
     [LoggerMessage(LogLevel.Error, "{caller}: {dbContextType} does not contain {setType}, message was '{mesg}'")]
     public static partial void UnknownDbSet(
