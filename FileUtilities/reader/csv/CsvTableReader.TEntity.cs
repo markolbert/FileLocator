@@ -140,6 +140,14 @@ public class CsvTableReader<TEntity> : ICsvTableReader<TEntity>
 
     protected virtual void CompleteImport()
     {
+        // release the file!
+        if( _fs != null )
+        {
+            _fs.Close();
+            _fs.Dispose();
+            _fs = null;
+        }
+
         // save whatever changes/updates were recorded
         _entityUpdater?.UpdateRecorder.SaveChanges();
     }
