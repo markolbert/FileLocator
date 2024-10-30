@@ -248,14 +248,21 @@ public class TableCreator<TEntity> : ITableCreator<TEntity>, ITableCreatorIntern
         if( _columns.All( c => c.HeaderCreators.Count == 0 ) )
             return numTitleRows;
 
-        var numHeaderRows = _columns.Max( c => c.HeaderCreators.Count != 0
-                                         ? c.HeaderCreators.Max( hc => hc.NumRows )
-                                         : 0 )
-          + numTitleRows;
+        var headerRows = 0;
+
+        foreach( var column in _columns.Where( c => c.ColumnsNeeded > 0 ) )
+        {
+            var curRows = column.HeaderCreators.Sum( hc => hc.NumRows );
+
+            if( curRows > headerRows )
+                headerRows = curRows;
+        }
 
         var startCol = 0;
 
-        foreach( var column in _columns )
+        // don't bother processing columns which have no data in them, which
+        // vector columns can have
+        foreach( var column in _columns.Where(c=>c.ColumnsNeeded > 0  ) )
         {
             if( column.HeaderCreators.Count == 0 )
             {
@@ -263,7 +270,7 @@ public class TableCreator<TEntity> : ITableCreator<TEntity>, ITableCreatorIntern
                 continue;
             }
 
-            var colHeaderRow = numHeaderRows - column.HeaderCreators.Sum( hc => hc.NumRows );
+            var colHeaderRow = headerRows - column.HeaderCreators.Sum( hc => hc.NumRows );
 
             foreach( var creator in column.HeaderCreators )
             {
@@ -274,7 +281,7 @@ public class TableCreator<TEntity> : ITableCreator<TEntity>, ITableCreatorIntern
             startCol += column.ColumnsNeeded;
         }
 
-        return numHeaderRows;
+        return headerRows;
     }
 
     private void CreateNamedRanges()
