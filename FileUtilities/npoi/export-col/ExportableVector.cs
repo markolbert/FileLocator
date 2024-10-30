@@ -45,6 +45,10 @@ public class ExportableVector<TEntity, TProp> : ExportableColumnBase, IExportabl
             return false;
         }
 
+        // if nothing to export, just return
+        if( TableCreator.Data.Count == 0 )
+            return true;
+
         for( var row = 0; row < TableCreator.Data.Count; row++ )
         {
             var vectorData = _getter( TableCreator.Data[ row ] );
