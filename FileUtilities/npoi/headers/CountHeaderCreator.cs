@@ -17,6 +17,5 @@ public class CountHeaderCreator(
     protected override void CreateVectorHeader(IWorkbook workbook, ICell cell, int colNum)
     {
         cell.SetCellValue(firstCol + colNum);
-        cell.CellStyle = Creator.StyleSets.ResolveCellStyle(workbook, StyleSet);
     }
 }
