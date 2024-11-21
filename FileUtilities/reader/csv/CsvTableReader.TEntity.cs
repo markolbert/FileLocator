@@ -60,7 +60,7 @@ public class CsvTableReader<TEntity> : ICsvTableReader<TEntity>
             _reader = new StreamReader(_fs);
 
             _csvReader = new CsvReader(_reader, CultureInfo.InvariantCulture);
-            _csvReader.Context.RegisterClassMap(classMap);
+            _csvReader.Context.RegisterClassMap(classMap!);
         }
         catch (Exception ex)
         {
@@ -71,7 +71,7 @@ public class CsvTableReader<TEntity> : ICsvTableReader<TEntity>
         }
 
         foreach( var record in _csvReader.GetRecords<TEntity>()
-                                         .Where( x => x != null && ( _filter == null || _filter.Include( x ) ) ) )
+                                         .Where( x => ( _filter == null || _filter.Include( x ) ) ) )
         {
             _entityUpdater?.ProcessEntityFields( record );
 
@@ -124,7 +124,7 @@ public class CsvTableReader<TEntity> : ICsvTableReader<TEntity>
 
             var propMap = classMap.Map(ImportedType, propInfo).Name(attr.CsvHeader);
 
-            if (attr.ConverterType != null && attr.TryCreateConverter(out var converter, LoggerFactory))
+            if (attr.ConverterType != null && attr.TryCreateConverter(out var converter, LoggerFactory) && converter != null)
                 propMap.TypeConverter(converter);
         }
 

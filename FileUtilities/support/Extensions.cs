@@ -66,7 +66,7 @@ public static class Extensions
             var propMap = classMap.Map( entityType, propInfo ).Name( attr.CsvHeader );
 
             if( attr.ConverterType != null && attr.TryCreateConverter( out var converter, loggerFactory ) )
-                propMap.TypeConverter( converter );
+                propMap.TypeConverter( converter! );
         }
 
         return classMap;

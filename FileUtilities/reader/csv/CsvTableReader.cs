@@ -101,14 +101,14 @@ public class CsvTableReader : ICsvTableReader
 
     protected virtual bool Initialize() => true;
 
-    // CsvReaDER will always be non-null when this is called
+    // CsvReader will always be non-null when this is called
     protected virtual DataRecord CreateDataRecord()
     {
         var retVal = new DataRecord( CurrentRecord );
 
         for( var colIdx = 0; colIdx < CsvReader!.ColumnCount; colIdx++ )
         {
-            if( retVal.AddValue(colIdx, CsvReader[colIdx]))
+            if( retVal.AddValue(colIdx, CsvReader[colIdx]!))
                 continue;
 
             Logger?.DuplicateColumnRead( Source!.FilePath, colIdx, CurrentRecord );
