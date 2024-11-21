@@ -23,16 +23,16 @@ public class SpanningHeader( string text, int numColumns, ISheetCreator creator,
             BorderInfo = new BorderInfo( BorderStyle.None, BorderStyle.None, BorderStyle.Thin, BorderStyle.None )
         };
 
-        cell.CellStyle = Creator.StyleSets.ResolveCellStyle(workbook, spanStyle);
-
         var mergeRegion = new CellRangeAddress( startingRow, startingRow, startingColumn, startingColumn + NumColumns - 1 );
         Creator.Sheet.AddMergedRegion( mergeRegion );
 
+        var cellStyle = Creator.StyleSets.ResolveCellStyle(workbook, spanStyle);
+
         // update styles in other cells in merged region
-        for( var colIdx = 1; colIdx < NumColumns; colIdx++ )
+        for ( var colIdx = 0; colIdx < NumColumns; colIdx++ )
         {
             var mergeCell = Creator.Sheet.GetOrCreateCell( startingRow, startingColumn + colIdx );
-            mergeCell.CellStyle = cell.CellStyle;
+            mergeCell.CellStyle = cellStyle;
         }
     }
 }
