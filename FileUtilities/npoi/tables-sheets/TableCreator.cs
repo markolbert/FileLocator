@@ -214,9 +214,7 @@ public class TableCreator<TEntity> : ITableCreator<TEntity>, ITableCreatorIntern
         if( Sheet == null )
             return;
 
-        var numTitles = _titleRows.ExportTitlesToSheet( workbook );
-
-        _firstDataRow = AddHeaders( workbook, numTitles );
+        _firstDataRow = AddHeaders( workbook, _titleRows.Count );
         FreezeColumn = FreezeColumn < 0 ? 0 : FreezeColumn;
 
         // leave room for title lines (we add them at the end so that
@@ -237,26 +235,35 @@ public class TableCreator<TEntity> : ITableCreator<TEntity>, ITableCreatorIntern
         evaluator.EvaluateAll();
 
         SizeColumns();
+
+        // title rows are added last so their content doesn't 
+        // confuse column sizing
+        _titleRows.ExportTitlesToSheet( workbook );
     }
 
+    // returns number of rows used so far
     private int AddHeaders( IWorkbook workbook, int numTitleRows )
     {
         // shouldn't happen, but...
         if( Sheet == null )
             return 0;
 
+        // if there are no column headers, just return the number of title rows
         if( _columns.All( c => c.HeaderCreators.Count == 0 ) )
             return numTitleRows;
 
-        var headerRows = 0;
+        // determine the tallest header
+        var maxHeaderHeight = 0;
 
         foreach( var column in _columns.Where( c => c.ColumnsNeeded > 0 ) )
         {
             var curRows = column.HeaderCreators.Sum( hc => hc.NumRows );
 
-            if( curRows > headerRows )
-                headerRows = curRows;
+            if( curRows > maxHeaderHeight )
+                maxHeaderHeight = curRows;
         }
+
+        var lastHeaderRow = maxHeaderHeight + numTitleRows;
 
         var startCol = 0;
 
@@ -264,24 +271,30 @@ public class TableCreator<TEntity> : ITableCreator<TEntity>, ITableCreatorIntern
         // vector columns can have
         foreach( var column in _columns.Where(c=>c.ColumnsNeeded > 0  ) )
         {
+            // if there are no column headers defined for this column,
+            // skip to the next one after updating the starting column #
             if( column.HeaderCreators.Count == 0 )
             {
                 startCol += column.ColumnsNeeded;
                 continue;
             }
 
-            var colHeaderRow = headerRows - column.HeaderCreators.Sum( hc => hc.NumRows );
+            // this column's starting header row is the maximum header height
+            // less this column's required number of rows
+            var curHeaderStartingRow = lastHeaderRow - column.HeaderCreators.Sum( hc => hc.NumRows );
 
             foreach( var creator in column.HeaderCreators )
             {
-                creator.PopulateSheet(workbook, colHeaderRow, startCol);
-                colHeaderRow += creator.NumRows;
+                creator.PopulateSheet(workbook, curHeaderStartingRow, startCol);
+
+                // adjust starting row for next column header
+                curHeaderStartingRow += creator.NumRows;
             }
 
             startCol += column.ColumnsNeeded;
         }
 
-        return headerRows;
+        return lastHeaderRow;
     }
 
     private void CreateNamedRanges()
