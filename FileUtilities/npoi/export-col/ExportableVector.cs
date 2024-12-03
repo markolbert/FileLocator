@@ -29,7 +29,7 @@ public class ExportableVector<TEntity, TProp> : ExportableColumnBase, IExportabl
         }
         else BoundProperty = propInfo!.Name;
 
-        ColumnsNeeded = TableCreator.Data.Max( r => _getter( r ).Count );
+        ColumnsNeeded = TableCreator.Data.Count == 0 ? 0 : TableCreator.Data.Max( r => _getter( r ).Count );
     }
 
     public ITableCreator<TEntity> TableCreator => (ITableCreator<TEntity>) Creator;
