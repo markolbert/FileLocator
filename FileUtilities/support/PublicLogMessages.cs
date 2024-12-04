@@ -23,14 +23,6 @@ public static partial class PublicLogMessages
     );
 
     [LoggerMessage(LogLevel.Warning, "{caller}: Unsupported {enumType} value '{value}'")]
-    public static partial void UnsupportedEnumValue(
-        this ILogger logger,
-        Type enumType,
-        string value,
-        [CallerMemberName] string caller = ""
-    );
-
-    [LoggerMessage(LogLevel.Warning, "{caller}: Unsupported {enumType} value '{value}'")]
     public static partial void SkippingEnumValue(
         this ILogger logger,
         Type enumType,
