@@ -75,7 +75,7 @@ public static class NpoiExtensions
 
             var curFlag = (AggregateFunction) rawFlag;
 
-            if( curFlag == AggregateFunction.None || !aggFunc.HasFlag( curFlag ) )
+            if( curFlag != aggFunc )
                 continue;
 
             return memberInfo.GetCustomAttribute<AggregateFunctionUsageAttribute>();
