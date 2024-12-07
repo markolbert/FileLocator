@@ -69,18 +69,10 @@ public class Aggregator<TEntity, TProp>(
         // formula cell is blank.
         var labelCell = Creator.Sheet.GetOrCreateCell( startingRow + tableExporter.NumDataRows, startingCol - 1 );
 
-        // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
-        switch( labelCell.CellType )
-        {
-            case CellType.Blank:
-                // no op; add label
-                break;
-
-            default:
-                break;
-        }
+        if( labelCell.CellType != CellType.Blank )
+            return;
 
         labelCell.SetCellValue( AggregateFunction.GetLabel() );
-        labelCell.CellStyle = Creator.StyleSets.ResolveCellStyle( workbook, labelStyleSet );
+        labelCell.CellStyle = Creator.StyleSets.ResolveCellStyle( workbook, labelStyleSet ?? tableExporter.StyleSets.DefaultBase );
     }
 }
