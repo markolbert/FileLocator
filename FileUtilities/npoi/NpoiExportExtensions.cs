@@ -337,7 +337,7 @@ public static class NpoiExportExtensions
     public static IExportableColumn<TEntity, TProp> Aggregator<TEntity, TProp>(
         this IExportableColumn<TEntity, TProp> exportable,
         AggregateFunction aggFunc,
-        FormatCodeStyleSet? labelStyle = null
+        StyleSetBase? labelStyle = null
     )
         where TEntity : class
     {
