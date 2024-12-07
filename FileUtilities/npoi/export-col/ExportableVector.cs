@@ -67,12 +67,16 @@ public class ExportableVector<TEntity, TProp> : ExportableColumnBase, IExportabl
 
         var sumAgg = Aggregators.FirstOrDefault( a => a.AggregateFunction == AggregateFunction.Sum );
         var aggRows = sumAgg == null ? 0 : 1;
+        var aggFuncNum = 0;
 
-        sumAgg?.PopulateSheet( workbook, startingRow, startingCol );
+        sumAgg?.PopulateSheet( workbook, startingRow, startingCol, aggFuncNum );
 
         foreach( var agg in Aggregators.Where( a => a.AggregateFunction != AggregateFunction.Sum ) )
         {
-            agg.PopulateSheet( workbook, startingRow + aggRows, startingCol );
+            aggFuncNum++;
+
+            agg.PopulateSheet( workbook, startingRow + aggRows, startingCol, aggFuncNum );
+            
             aggRows++;
         }
 

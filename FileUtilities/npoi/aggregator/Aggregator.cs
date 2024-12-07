@@ -22,7 +22,7 @@ public class Aggregator<TEntity, TProp>(
 
     public AggregateFunction AggregateFunction { get; } = aggFunc;
 
-    public void PopulateSheet( IWorkbook workbook, int startingRow, int startingCol )
+    public void PopulateSheet( IWorkbook workbook, int startingRow, int startingCol, int aggFuncNum )
     {
         if( AggregateFunction == AggregateFunction.None )
             return;
@@ -32,7 +32,8 @@ public class Aggregator<TEntity, TProp>(
 
         var sheetCol = startingCol;
         var tableExporter = (TableCreator<TEntity>) Creator;
-        var lastDataRow = startingRow + tableExporter.NumDataRows;
+        var firstDataRow = startingRow + 1 - aggFuncNum;
+        var lastDataRow = startingRow + tableExporter.NumDataRows - aggFuncNum;
         var aggFuncName = AggregateFunction.GetFunctionText();
 
         StyleSetBase aggStyle;
@@ -53,7 +54,7 @@ public class Aggregator<TEntity, TProp>(
 
             // have to add 1 to startingRow because it's zero-based but the sheet
             // is one-based
-            var range = $"{colText}{startingRow + 1}:{colText}{lastDataRow}";
+            var range = $"{colText}{firstDataRow}:{colText}{lastDataRow}";
 
             var cell = Creator.Sheet.GetOrCreateCell( startingRow + tableExporter.NumDataRows, sheetCol );
 
@@ -66,9 +67,18 @@ public class Aggregator<TEntity, TProp>(
 
         // only add the label if the cell immediately to the left of the first aggregate
         // formula cell is blank.
-        var labelCell = Creator.Sheet.GetOrCreateCell( startingRow, startingCol - 1 );
-        if( labelCell.CellType != CellType.Blank )
-            return;
+        var labelCell = Creator.Sheet.GetOrCreateCell( startingRow + tableExporter.NumDataRows, startingCol - 1 );
+
+        // ReSharper disable once SwitchStatementHandlesSomeKnownEnumValuesWithDefault
+        switch( labelCell.CellType )
+        {
+            case CellType.Blank:
+                // no op; add label
+                break;
+
+            default:
+                break;
+        }
 
         labelCell.SetCellValue( AggregateFunction.GetLabel() );
         labelCell.CellStyle = Creator.StyleSets.ResolveCellStyle( workbook, labelStyleSet );
