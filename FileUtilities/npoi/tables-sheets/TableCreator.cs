@@ -231,8 +231,18 @@ public class TableCreator<TEntity> : ITableCreator<TEntity>, ITableCreatorIntern
 
         // have to evaluate the sheet so that formula values get set
         // and autosizing works as expected
-        var evaluator = new XSSFFormulaEvaluator( workbook );
-        evaluator.EvaluateAll();
+        try
+        {
+            var evaluator = new XSSFFormulaEvaluator( workbook );
+            evaluator.EvaluateAll();
+        }
+        catch( NotImplementedException ex )
+        {
+            // NPOI throws this exception when evaluating at least
+            // the stdevp() function...but the exception doesn't 
+            // seem to cause any problems, so we just log it
+            _logger?.NpoiEvaluationException( ex.Message );
+        }
 
         SizeColumns();
 

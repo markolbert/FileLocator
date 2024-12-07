@@ -264,5 +264,12 @@ internal static partial class InternalLogMessages
         [ CallerMemberName ] string caller = ""
     );
 
+    [LoggerMessage(LogLevel.Error, "{caller}: {mesg}")]
+    internal static partial void NpoiEvaluationException(
+        this ILogger logger,
+        string mesg,
+        [ CallerMemberName ] string caller = ""
+    );
+
     #endregion
 }
