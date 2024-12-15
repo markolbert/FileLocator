@@ -1,6 +1,6 @@
 ﻿namespace J4JSoftware.FileUtilities;
 
-public class DataRecord( int recNum )
+public class DataRecord( int recNum, List<string> headers )
 {
     private readonly Dictionary<int, FieldValue> _fieldValues = [];
 
@@ -35,5 +35,17 @@ public class DataRecord( int recNum )
         _fieldValues.Add( fieldNum, new FieldValue( fieldNum, value ) );
 
         return true;
+    }
+
+    public string this[ int idx ] => _fieldValues[ idx ].Value;
+
+    public string this[ string fieldName ]
+    {
+        get
+        {
+            var fieldIndex = headers.FindIndex( x => x.Equals( fieldName, StringComparison.OrdinalIgnoreCase ) );
+
+            return this[ fieldIndex ];
+        }
     }
 }
