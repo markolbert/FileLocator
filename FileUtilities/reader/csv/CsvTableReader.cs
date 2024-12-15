@@ -65,10 +65,14 @@ public class CsvTableReader : ICsvTableReader
             Logger?.FileParsingError(Source!.FilePath, ex.Message);
             Dispose();
 
-            yield break;
+#pragma warning disable CA2200
+            // ReSharper disable once PossibleIntendedRethrow
+            throw ex;
+#pragma warning restore CA2200
         }
 
         var headerRead = false;
+        var headers = new List<string>();
 
         while( CsvReader.Read() )
         {
@@ -81,12 +85,14 @@ public class CsvTableReader : ICsvTableReader
                 }
 
                 headerRead = true;
+                headers = CsvReader.HeaderRecord!.ToList();
+
                 continue;
             }
 
             CurrentRecord++;
 
-            var curRecord = CreateDataRecord();
+            var curRecord = CreateDataRecord(headers);
 
             _entityUpdater?.ProcessEntityFields( curRecord );
 
@@ -102,9 +108,9 @@ public class CsvTableReader : ICsvTableReader
     protected virtual bool Initialize() => true;
 
     // CsvReader will always be non-null when this is called
-    protected virtual DataRecord CreateDataRecord()
+    protected virtual DataRecord CreateDataRecord(List<string> headers )
     {
-        var retVal = new DataRecord( CurrentRecord );
+        var retVal = new DataRecord( CurrentRecord, headers );
 
         for( var colIdx = 0; colIdx < CsvReader!.ColumnCount; colIdx++ )
         {
