@@ -56,9 +56,6 @@ public record NumericStyleSet : StyleSetBase
 
     protected override string CreateTextFormat()
     {
-        //if( this is DoubleStyleSet )
-        //    System.Diagnostics.Debugger.Break();
-
         var digitsSection = GetDigitsSection();
 
         string positive;
