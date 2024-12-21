@@ -167,6 +167,13 @@ public static partial class PublicLogMessages
         [CallerMemberName] string caller = ""
     );
 
+    [ LoggerMessage( LogLevel.Error, "{type}::{caller}: undefined path" ) ]
+    public static partial void UndefinedPath(
+        this ILogger logger,
+        string type,
+        [ CallerMemberName ] string caller = ""
+    );
+
     [LoggerMessage(LogLevel.Error,
                      "{caller}: File {path} not parsed, message was '{mesg}' ({lineNum} : {srcFile})")]
     public static partial void FileParsingError(

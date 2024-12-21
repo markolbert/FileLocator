@@ -72,6 +72,15 @@ public static class NpoiExportExtensions
         return tableCreator.CastToInternal().AddColumn(propExpr);
     }
 
+    public static IExportableColumn<TEntity, DateTime> AddColumn<TEntity>(
+        this ITableCreator<TEntity> tableCreator,
+        Expression<Func<TEntity, DateTime>> propExpr
+    )
+        where TEntity : class
+    {
+        return tableCreator.CastToInternal().AddColumn(propExpr);
+    }
+
     public static IExportableColumn<TEntity, bool> AddColumn<TEntity>(
         this ITableCreator<TEntity> tableCreator,
         Expression<Func<TEntity, bool>> propExpr

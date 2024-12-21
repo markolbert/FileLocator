@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Linq.Expressions;
+﻿using System.Linq.Expressions;
 using Microsoft.Extensions.Logging;
 using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
@@ -7,14 +6,13 @@ using NPOI.XSSF.UserModel;
 
 namespace J4JSoftware.FileUtilities;
 
-public class WorksheetTableReader<TEntity> : IWorksheetTableReader<TEntity>
+public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEntity, TContext>
     where TEntity : class, new()
+    where TContext : WorksheetImportContext
 {
     private readonly Dictionary<int, IImportedColumn> _columns = [];
     private readonly IRecordFilter<TEntity>? _filter;
     private readonly IKeyedEntityUpdater<TEntity>? _entityUpdater;
-
-    private IWorksheetContext? _source;
 
     public WorksheetTableReader(
         IRecordFilter<TEntity>? filter = null,
@@ -34,42 +32,29 @@ public class WorksheetTableReader<TEntity> : IWorksheetTableReader<TEntity>
 
     public Type ImportedType => typeof( TEntity );
 
-    public IWorksheetContext? Source
+    public IEnumerable<TEntity> GetData( TContext context )
     {
-        get => _source;
-
-        set
-        {
-            _source = value;
-
-            if( _entityUpdater != null )
-                _entityUpdater.Source = _source;
-        }
-    }
-
-    public IEnumerator<TEntity> GetEnumerator()
-    {
-        if (!InitializeInternal(out var sheet))
+        if( !InitializeInternal( context, out var sheet ) )
             yield break;
 
-        for (var rowNum = 1; rowNum <= sheet!.LastRowNum; rowNum++)
+        for( var rowNum = 1; rowNum <= sheet!.LastRowNum; rowNum++ )
         {
-            var row = sheet.GetRow(rowNum);
+            var row = sheet.GetRow( rowNum );
             var entity = new TEntity();
 
-            foreach (var kvp in _columns)
+            foreach( var kvp in _columns )
             {
-                var cell = row.GetCell(kvp.Key);
-                if (cell == null)
+                var cell = row.GetCell( kvp.Key );
+                if( cell == null )
                     continue;
 
-                if (kvp.Value.SetValue(sheet, entity, cell))
+                if( kvp.Value.SetValue( sheet, entity, cell ) )
                     continue;
 
-                Logger?.FailedToSetCellValue(kvp.Key, rowNum);
+                Logger?.FailedToSetCellValue( kvp.Key, rowNum );
             }
 
-            _entityUpdater?.ProcessEntityFields(entity);
+            _entityUpdater?.ProcessEntityFields( entity );
 
             if( _filter == null || _filter.Include( entity ) )
                 yield return entity;
@@ -78,60 +63,71 @@ public class WorksheetTableReader<TEntity> : IWorksheetTableReader<TEntity>
         CompleteImport();
     }
 
-    private bool InitializeInternal( out ISheet? sheet )
+    private bool InitializeInternal( WorksheetImportContext context, out ISheet? sheet )
     {
         sheet = null;
 
-        if( Source == null )
+        if( !File.Exists( context.ImportPath ) )
         {
-            Logger?.UndefinedImportSource();
+            Logger?.FileNotFound( context.ImportPath );
             return false;
         }
 
-        if( !File.Exists( Source.FilePath ) )
-        {
-            Logger?.FileNotFound( Source.FilePath );
-            return false;
-        }
-
-        var isXlsx = Path.GetExtension( Source.FilePath ).Equals( ".xlsx", StringComparison.OrdinalIgnoreCase );
+        var isXlsx = Path.GetExtension( context.ImportPath ).Equals( ".xlsx", StringComparison.OrdinalIgnoreCase );
 
         IWorkbook workbook;
 
         try
         {
-            using var fs = new FileStream( Source.FilePath, FileMode.Open, FileAccess.Read );
+            using var fs = new FileStream( context.ImportPath, FileMode.Open, FileAccess.Read );
             workbook = isXlsx ? new XSSFWorkbook( fs ) : new HSSFWorkbook( fs );
         }
         catch( Exception ex )
         {
-            Logger?.FileUnreadable( Source.FilePath, ex.Message );
+            Logger?.FileUnreadable( context.ImportPath, ex.Message );
             return true;
         }
 
         try
         {
-            sheet = workbook.GetSheet( Source.SheetName );
+            sheet = workbook.GetSheet( context.SheetName );
 
-            if( _entityUpdater != null )
-                _entityUpdater.Source = Source;
+            if( _entityUpdater?.Tweaks == null )
+                return sheet != null
+                 && ValidateColumns( context, sheet )
+                 && ( _entityUpdater?.Initialize() ?? true )
+                 && Initialize();
 
-            return sheet != null && ValidateColumns( sheet ) && ( _entityUpdater?.Initialize() ?? true ) && Initialize();
+            if( !string.IsNullOrWhiteSpace( context.TweaksPath ) && File.Exists( context.TweaksPath ) )
+                _entityUpdater.Tweaks.Load( context.TweaksPath );
+            else
+            {
+                if( string.IsNullOrWhiteSpace( context.TweaksPath ) )
+                    Logger?.UndefinedPath( nameof( WorksheetTableReader<TEntity, TContext> ) );
+                else Logger?.FileNotFound( context.TweaksPath );
+
+                return false;
+            }
+
+            return sheet != null
+             && ValidateColumns( context, sheet )
+             && ( _entityUpdater?.Initialize() ?? true )
+             && Initialize();
         }
         catch( Exception ex )
         {
-            Logger?.MissingSheetWithMessage( Source.SheetName, ex.Message );
+            Logger?.MissingSheetWithMessage( context.SheetName, ex.Message );
             return false;
         }
     }
 
-    private bool ValidateColumns( ISheet sheet )
+    private bool ValidateColumns( WorksheetImportContext context, ISheet sheet )
     {
         var headerRow = sheet.GetRow( 0 );
 
         if( headerRow == null )
         {
-            Logger?.MissingSheetHeaderRow(sheet.SheetName);
+            Logger?.MissingSheetHeaderRow( sheet.SheetName );
             return false;
         }
 
@@ -154,7 +150,7 @@ public class WorksheetTableReader<TEntity> : IWorksheetTableReader<TEntity>
                 matchedColumns++;
             else
             {
-                Logger?.BadHeaderName( Source!.SheetName, colNum, column.ColumnNameInSheet, cell.StringCellValue );
+                Logger?.BadHeaderName( context.SheetName, colNum, column.ColumnNameInSheet, cell.StringCellValue );
                 return false;
             }
         }
@@ -227,7 +223,7 @@ public class WorksheetTableReader<TEntity> : IWorksheetTableReader<TEntity>
         else _columns.Add( colNum, mapping );
     }
 
-    #endregion  
+    #endregion
 
     protected virtual bool Initialize() => true;
 
@@ -241,17 +237,20 @@ public class WorksheetTableReader<TEntity> : IWorksheetTableReader<TEntity>
     {
     }
 
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-    bool ITableReader.SetSource(object source)
+    bool ITableReader.TryGetData(
+        ImportContext context,
+        out IEnumerable<object> data
+    )
     {
-        if (source is IWorksheetContext castSource)
+        if( context is TContext castContext )
         {
-            Source = castSource;
+            data = GetData( castContext );
             return true;
         }
+        else data = new List<object>();
 
-        Logger?.UnexpectedType(typeof(IFileContext), source.GetType());
+        Logger?.InvalidTypeAssignment( context.GetType(), typeof( TContext ) );
+
         return false;
     }
 }

@@ -75,28 +75,18 @@ public class Tweaks<TEntity> : ITweaks<TEntity>
         else return value;
     }
 
-    public IFileContext? Source { get; set; }
-
-    public bool Load()
+    public bool Load(string filePath)
     {
-        // we're interested in the tweaks file associated with Source, not the source file itself
-        // check to ensure Source is actually ITableSource
-        if( Source is not ITableSource tableSource )
+        if( !File.Exists( filePath ) )
         {
-            _logger?.TweaksPathMissing( Source?.GetType() ?? typeof( object ) );
-            return false;
-        }
-
-        if( tableSource.TweakPath == null )
-        {
-            _logger?.UndefinedImportSource();
+            _logger?.FileNotFound( filePath );
             return false;
         }
 
         var parser = new MultiRecordJsonFileReader<Tweak>( _loggerFactory );
         parser.SerializerOptions.Converters.Add( new JsonTweakConverter<TEntity>( this, _loggerFactory ) );
 
-        if( !parser.LoadFile( tableSource.TweakPath ) )
+        if( !parser.LoadFile( filePath ) )
         {
             _logger?.Error( $"Parsing of {typeof( Tweaks<TEntity> )} failed" );
             return false;
@@ -113,7 +103,7 @@ public class Tweaks<TEntity> : ITweaks<TEntity>
         {
             if( _tweaks.TryGetValue( tweak.Key, out _ ) )
             {
-                _logger?.ReplacedDuplicate( $"{nameof( TEntity )} tweak for id", tweak.Key.ToString() );
+                _logger?.ReplacedDuplicate( $"{typeof( TEntity )} tweak for id", tweak.Key.ToString() );
                 _tweaks[ tweak.Key ] = tweak;
             }
             else _tweaks.Add( tweak.Key, tweak );

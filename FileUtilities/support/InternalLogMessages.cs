@@ -79,6 +79,22 @@ internal static partial class InternalLogMessages
         [CallerMemberName] string caller = ""
     );
 
+    [LoggerMessage(LogLevel.Warning, "{caller}: unneeded tweaks file '{path}' specified")]
+    internal static partial void UnneededTweaksFile(
+        this ILogger logger,
+        Type importerType,
+        string path,
+        [ CallerMemberName ] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Error, "{caller}: Could not find field '{field}' to ignore in {entityType}")]
+    internal static partial void IgnoreFieldNotFound(
+        this ILogger logger,
+        Type entityType,
+        string field,
+        [ CallerMemberName ] string caller = ""
+    );
+
     #endregion
 
     #region type-related
@@ -173,7 +189,7 @@ internal static partial class InternalLogMessages
         [CallerMemberName] string caller = ""
     );
 
-    [LoggerMessage(LogLevel.Warning, "{caller}: Configuration file contains no style definitions")]
+    [LoggerMessage(LogLevel.Information, "{caller}: Configuration file contains no style definitions")]
     internal static partial void StylesNotDefined(this ILogger logger, [CallerMemberName] string caller = "");
 
     [LoggerMessage(LogLevel.Error, "{caller}: Multiple {styleType} definitions, only the first will be used")]
@@ -204,7 +220,7 @@ internal static partial class InternalLogMessages
         [CallerMemberName] string caller = ""
     );
 
-    [LoggerMessage(LogLevel.Warning, "{caller}: Default style set '{styleName}' not defined, defaulting")]
+    [LoggerMessage(LogLevel.Information, "{caller}: Default style set '{styleName}' not defined, defaulting")]
     internal static partial void UndefinedDefaultStyle(
         this ILogger logger,
         string styleName,

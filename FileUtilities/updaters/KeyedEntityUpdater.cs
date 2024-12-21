@@ -8,8 +8,6 @@ public class KeyedEntityUpdater<TEntity> : IKeyedEntityUpdater<TEntity>
 {
     private readonly List<IFieldUpdater> _fieldProcessors = [];
 
-    private IFileContext? _source;
-
     protected KeyedEntityUpdater(
         IUpdateRecorder updateRecorder,
         ITweaks<TEntity>? tweaks,
@@ -26,32 +24,12 @@ public class KeyedEntityUpdater<TEntity> : IKeyedEntityUpdater<TEntity>
     protected ILoggerFactory? LoggerFactory { get; }
     protected ILogger? Logger { get; }
 
-    protected ITweaks<TEntity>? Tweaks { get; }
+    public ITweaks? Tweaks { get; }
 
     public IUpdateRecorder UpdateRecorder { get; }
     public Type EntityType => typeof( TEntity );
 
-    public IFileContext? Source
-    {
-        get => _source;
-
-        set
-        {
-            _source = value;
-
-            if( Tweaks != null )
-                Tweaks.Source = _source;
-        }
-    }
-
-    public virtual bool Initialize()
-    {
-        if( Tweaks == null )
-            return true;
-
-        Tweaks.Source = Source;
-        return Tweaks.Load();
-    }
+    public virtual bool Initialize() => true;
 
     protected void AddFieldCleaner<TTgtProp>(
         Expression<Func<TEntity, int>> keyExpr,

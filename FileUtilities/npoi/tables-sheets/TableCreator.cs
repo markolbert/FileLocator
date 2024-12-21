@@ -113,6 +113,20 @@ public class TableCreator<TEntity> : ITableCreator<TEntity>, ITableCreatorIntern
         return retVal;
     }
 
+    IExportableColumn<TEntity, DateTime> ITableCreatorInternal<TEntity>.AddColumn(
+        Expression<Func<TEntity, DateTime>> propExpr
+    )
+    {
+        var retVal = new ExportableColumn<TEntity, DateTime>(this,
+                                                             propExpr,
+                                                             StyleSets.DefaultDate,
+                                                             WorkbookCreator.LoggerFactory);
+
+        _columns.Add(retVal);
+
+        return retVal;
+    }
+
     IExportableColumn<TEntity, bool> ITableCreatorInternal<TEntity>.AddColumn(
         Expression<Func<TEntity, bool>> propExpr
     )

@@ -4,8 +4,8 @@ public interface IKeyedEntityUpdater
 {
     IUpdateRecorder UpdateRecorder { get; }
     Type EntityType { get; }
+    ITweaks? Tweaks { get; }
 
-    IFileContext? Source { get; set; }
     bool Initialize();
 
     void ProcessEntityFields( object entity );

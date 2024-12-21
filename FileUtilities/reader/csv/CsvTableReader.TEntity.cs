@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Globalization;
+﻿using System.Globalization;
 using System.Reflection;
 using CsvHelper;
 using CsvHelper.Configuration;
@@ -7,13 +6,12 @@ using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
 
-public class CsvTableReader<TEntity> : ICsvTableReader<TEntity>
+public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
     where TEntity : class, new()
 {
     private readonly IRecordFilter<TEntity>? _filter;
     private readonly IKeyedEntityUpdater<TEntity>? _entityUpdater;
 
-    private ICsvContext? _source;
     private FileStream? _fs;
     private StreamReader? _reader;
     private CsvReader? _csvReader;
@@ -36,27 +34,28 @@ public class CsvTableReader<TEntity> : ICsvTableReader<TEntity>
 
     public Type ImportedType => typeof( TEntity );
 
-    public ICsvContext? Source
+    public IEnumerable<TEntity> GetData(ImportContext context)
     {
-        get => _source;
-
-        set
-        {
-            _source = value;
-
-            if( _entityUpdater != null )
-                _entityUpdater.Source = _source;
-        }
-    }
-
-    public IEnumerator<TEntity> GetEnumerator()
-    {
-        if (!InitializeInternal(out var classMap))
+        if (!InitializeInternal(context, out var classMap))
             yield break;
+
+        foreach( var fieldToIgnore in context.FieldsToIgnore )
+        {
+            var fieldMap = classMap!.MemberMaps.FirstOrDefault(
+                mm => mm.Data.Names.Any( n => n.Equals( fieldToIgnore, StringComparison.OrdinalIgnoreCase ) ) );
+
+            if( fieldMap == null )
+            {
+                Logger?.IgnoreFieldNotFound( typeof( TEntity ), fieldToIgnore );
+                yield break;
+            }
+
+            fieldMap.Ignore( true );
+        }
 
         try
         {
-            _fs = File.Open(Source!.FilePath, FileMode.Open, FileAccess.Read);
+            _fs = File.Open(context.ImportPath, FileMode.Open, FileAccess.Read);
             _reader = new StreamReader(_fs);
 
             _csvReader = new CsvReader(_reader, CultureInfo.InvariantCulture);
@@ -64,7 +63,7 @@ public class CsvTableReader<TEntity> : ICsvTableReader<TEntity>
         }
         catch (Exception ex)
         {
-            Logger?.FileParsingError(Source!.FilePath, ex.Message);
+            Logger?.FileParsingError(context.ImportPath, ex.Message);
             Dispose();
 
             yield break;
@@ -81,19 +80,15 @@ public class CsvTableReader<TEntity> : ICsvTableReader<TEntity>
         CompleteImport();
     }
 
-    private bool InitializeInternal( out ClassMap<TEntity>? classMap )
+    protected virtual bool Initialize() => true;
+
+    private bool InitializeInternal( ImportContext context, out ClassMap<TEntity>? classMap )
     {
         classMap = null;
 
-        if (Source == null)
+        if (!File.Exists(context.ImportPath))
         {
-            Logger?.UndefinedImportSource();
-            return false;
-        }
-
-        if (!File.Exists(Source.FilePath))
-        {
-            Logger?.FileNotFound(Source.FilePath);
+            Logger?.FileNotFound(context.ImportPath);
             return false;
         }
 
@@ -129,14 +124,32 @@ public class CsvTableReader<TEntity> : ICsvTableReader<TEntity>
         }
 
         if( _entityUpdater == null )
-            return Initialize();
+        {
+            if (!string.IsNullOrWhiteSpace(context.ImportPath) && File.Exists(context.TweaksPath))
+                Logger?.UnneededTweaksFile(GetType(), context.TweaksPath);
 
-        _entityUpdater.Source = Source;
-            
+            return Initialize();
+        }
+
+        if (_entityUpdater.Tweaks == null)
+            return _entityUpdater.Initialize() && Initialize();
+
+        if( string.IsNullOrWhiteSpace( context.TweaksPath ) )
+        {
+            Logger?.UndefinedPath( nameof( CsvTableReader<TEntity> ) );
+            return false;
+        }
+
+        if( !File.Exists( context.TweaksPath ) )
+        {
+            Logger?.FileNotFound( context.TweaksPath );
+            return false;
+        }
+
+        _entityUpdater.Tweaks.Load(context.TweaksPath!);
+
         return _entityUpdater.Initialize() && Initialize();
     }
-
-    protected virtual bool Initialize() => true;
 
     protected virtual void CompleteImport()
     {
@@ -159,17 +172,12 @@ public class CsvTableReader<TEntity> : ICsvTableReader<TEntity>
         _csvReader?.Dispose();
     }
 
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
-    bool ITableReader.SetSource( object source )
+    bool ITableReader.TryGetData(
+        ImportContext context,
+        out IEnumerable<object> data
+    )
     {
-        if( source is ICsvContext castSource )
-        {
-            Source = castSource;
-            return true;
-        }
-
-        Logger?.UnexpectedType(typeof(ICsvContext), source.GetType());
-        return false;
+        data = GetData(context);
+        return true;
     }
 }

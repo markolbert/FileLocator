@@ -9,9 +9,7 @@ public interface ITweaks
     ReadOnlyDictionary<int, Tweak> Collection { get; }
     bool AllComplete { get; }
 
-    IFileContext? Source { get; set; }
-
-    bool Load();
+    bool Load(string filePath);
 
     void ApplyTweaks( object entity );
 }

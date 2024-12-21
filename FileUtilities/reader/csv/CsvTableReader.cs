@@ -1,16 +1,15 @@
 ﻿using CsvHelper;
+using MathNet.Numerics.Statistics.Mcmc;
 using Microsoft.Extensions.Logging;
-using System.Collections;
 using System.Globalization;
 
 namespace J4JSoftware.FileUtilities;
 
-public class CsvTableReader : ICsvTableReader
+public class CsvTableReader : ITableReader
 {
     private readonly IRecordFilter<DataRecord>? _filter;
     private readonly IKeyedEntityUpdater<DataRecord>? _entityUpdater;
 
-    private ICsvContext? _source;
     private FileStream? _fs;
     private StreamReader? _reader;
 
@@ -35,34 +34,21 @@ public class CsvTableReader : ICsvTableReader
 
     public Type ImportedType => typeof( DataRecord );
 
-    public ICsvContext? Source
+    public IEnumerable<DataRecord> GetData( ImportContext context )
     {
-        get => _source;
-
-        set
-        {
-            _source = value;
-
-            if (_entityUpdater != null)
-                _entityUpdater.Source = _source;
-        }
-    }
-
-    public IEnumerator<DataRecord> GetEnumerator()
-    {
-        if (!InitializeInternal())
+        if( !InitializeInternal(context) )
             yield break;
 
         try
         {
-            _fs = File.Open(Source!.FilePath, FileMode.Open, FileAccess.Read);
+            _fs = File.Open(context.ImportPath, FileMode.Open, FileAccess.Read);
             _reader = new StreamReader(_fs);
 
             CsvReader = new CsvReader(_reader, CultureInfo.InvariantCulture);
         }
         catch (Exception ex)
         {
-            Logger?.FileParsingError(Source!.FilePath, ex.Message);
+            Logger?.FileParsingError(context.ImportPath, ex.Message);
             Dispose();
 
 #pragma warning disable CA2200
@@ -74,13 +60,13 @@ public class CsvTableReader : ICsvTableReader
         var headerRead = false;
         var headers = new List<string>();
 
-        while( CsvReader.Read() )
+        while (CsvReader.Read())
         {
-            if( !headerRead && Source.HasHeader )
+            if (!headerRead && context.HasHeaders)
             {
-                if( !CsvReader.ReadHeader() )
+                if (!CsvReader.ReadHeader())
                 {
-                    Logger?.HeaderUnreadable( Source!.FilePath );
+                    Logger?.HeaderUnreadable(context.ImportPath);
                     yield break;
                 }
 
@@ -92,11 +78,11 @@ public class CsvTableReader : ICsvTableReader
 
             CurrentRecord++;
 
-            var curRecord = CreateDataRecord(headers);
+            var curRecord = CreateDataRecord(context.ImportPath, headers);
 
-            _entityUpdater?.ProcessEntityFields( curRecord );
+            _entityUpdater?.ProcessEntityFields(curRecord);
 
-            if( _filter != null && !_filter.Include( curRecord ) )
+            if (_filter != null && !_filter.Include(curRecord))
                 continue;
 
             yield return curRecord;
@@ -107,8 +93,46 @@ public class CsvTableReader : ICsvTableReader
 
     protected virtual bool Initialize() => true;
 
+    private bool InitializeInternal( ImportContext context )
+    {
+        CurrentRecord = 0;
+
+        if (!File.Exists(context.ImportPath))
+        {
+            Logger?.FileNotFound(context.ImportPath);
+            return false;
+        }
+
+        if (_entityUpdater == null)
+        {
+            if ( !string.IsNullOrWhiteSpace(context.TweaksPath) && File.Exists(context.TweaksPath))
+                Logger?.UnneededTweaksFile(GetType(), context.TweaksPath);
+
+            return Initialize();
+        }
+
+        if (_entityUpdater.Tweaks == null)
+            return _entityUpdater.Initialize() && Initialize();
+
+        if (string.IsNullOrWhiteSpace(context.TweaksPath))
+        {
+            Logger?.UndefinedPath(nameof(CsvTableReader));
+            return false;
+        }
+
+        if (!File.Exists(context.TweaksPath))
+        {
+            Logger?.FileNotFound(context.TweaksPath);
+            return false;
+        }
+
+        _entityUpdater.Tweaks.Load(context.TweaksPath!);
+
+        return _entityUpdater.Initialize() && Initialize();
+    }
+
     // CsvReader will always be non-null when this is called
-    protected virtual DataRecord CreateDataRecord(List<string> headers )
+    protected virtual DataRecord CreateDataRecord(string importPath, List<string> headers )
     {
         var retVal = new DataRecord( CurrentRecord, headers );
 
@@ -117,34 +141,10 @@ public class CsvTableReader : ICsvTableReader
             if( retVal.AddValue(colIdx, CsvReader[colIdx]!))
                 continue;
 
-            Logger?.DuplicateColumnRead( Source!.FilePath, colIdx, CurrentRecord );
+            Logger?.DuplicateColumnRead( importPath, colIdx, CurrentRecord );
         }
 
         return retVal;
-    }
-
-    private bool InitializeInternal()
-    {
-        CurrentRecord = 0;
-
-        if (Source == null)
-        {
-            Logger?.UndefinedImportSource();
-            return false;
-        }
-
-        if (!File.Exists(Source.FilePath))
-        {
-            Logger?.FileNotFound(Source.FilePath);
-            return false;
-        }
-
-        if (_entityUpdater == null)
-            return Initialize();
-
-        _entityUpdater.Source = Source;
-
-        return _entityUpdater.Initialize() && Initialize();
     }
 
     protected virtual void OnReadingEnded()
@@ -168,18 +168,12 @@ public class CsvTableReader : ICsvTableReader
         CsvReader?.Dispose();
     }
 
-    bool ITableReader.SetSource(object source)
+    bool ITableReader.TryGetData(
+        ImportContext context,
+        out IEnumerable<object> data
+    )
     {
-        if (source is ICsvContext castSource)
-        {
-            Source = castSource;
-            return true;
-        }
-
-        Logger?.UnexpectedType(typeof(IFileContext), source.GetType());
-        return false;
+        data = GetData( context );
+        return true;
     }
-
-    IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
-
 }
