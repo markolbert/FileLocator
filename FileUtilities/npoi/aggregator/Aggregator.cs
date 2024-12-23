@@ -46,7 +46,7 @@ public class Aggregator<TEntity, TProp>(
             var borderInfo = column.StyleSet.BorderInfo with { Bottom = BorderStyle.Double, Top = BorderStyle.Thin };
             aggStyle = column.StyleSet with { BorderInfo = borderInfo };
         }
-        else aggStyle = StyleSet;
+        else aggStyle = column.StyleSet;
 
         for( var idx = 0; idx < column.ColumnsNeeded; idx++ )
         {
