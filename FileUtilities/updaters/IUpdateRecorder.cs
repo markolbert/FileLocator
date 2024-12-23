@@ -11,7 +11,6 @@ public interface IUpdateRecorder
     bool SaveChanges();
 }
 
+// ReSharper disable once UnusedTypeParameter
 public interface IUpdateRecorder<TDb> : IUpdateRecorder
-    where TDb: DbContext
-{
-}
+    where TDb: DbContext;

@@ -11,8 +11,6 @@ public class ExportableColumn<TEntity, TProp> : ExportableColumnBase,
 {
     private readonly Func<TEntity, TProp?> _getter;
 
-    private readonly Expression<Func<TEntity, TProp?>> _propExpr;
-
     public ExportableColumn(
         ITableCreator<TEntity> tableCreator,
         Expression<Func<TEntity, TProp?>> propExpr,
@@ -25,7 +23,6 @@ public class ExportableColumn<TEntity, TProp> : ExportableColumnBase,
                 styleSet,
                 loggerFactory )
     {
-        _propExpr = propExpr;
         _getter = propExpr.Compile();
 
         var exprHelper = new ExpressionHelpers( LoggerFactory );

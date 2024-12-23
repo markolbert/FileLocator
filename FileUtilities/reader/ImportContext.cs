@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace J4JSoftware.FileUtilities;
+﻿namespace J4JSoftware.FileUtilities;
 
 public class ImportContext( params string[] fieldsToIgnore )
 {

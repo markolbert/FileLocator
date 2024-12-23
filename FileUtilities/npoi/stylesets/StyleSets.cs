@@ -133,7 +133,7 @@ public class StyleSets : IStyleSets
         if (temp is TStyleSet temp2)
             retVal = temp2;
         else
-            retVal = (TStyleSet) Activator.CreateInstance( typeof( TStyleSet ), [baseConfig] )!;
+            retVal = (TStyleSet) Activator.CreateInstance( typeof( TStyleSet ), baseConfig )!;
 
         return retVal;
     }

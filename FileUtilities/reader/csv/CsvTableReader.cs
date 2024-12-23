@@ -1,5 +1,4 @@
 ﻿using CsvHelper;
-using MathNet.Numerics.Statistics.Mcmc;
 using Microsoft.Extensions.Logging;
 using System.Globalization;
 

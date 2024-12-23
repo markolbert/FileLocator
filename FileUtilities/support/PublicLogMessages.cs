@@ -30,13 +30,6 @@ public static partial class PublicLogMessages
         [CallerMemberName] string caller = ""
     );
 
-    [LoggerMessage(LogLevel.Warning, "{caller}: {type} is not supported")]
-    public static partial void UnsupportedType(
-        this ILogger logger,
-        Type type,
-        [CallerMemberName] string caller = ""
-    );
-
     [LoggerMessage(LogLevel.Warning, Message = "{caller}: Duplicate {type} '{value}', skipping")]
     public static partial void SkippedDuplicate(this ILogger logger, Type type, string value, [CallerMemberName] string caller = "");
 
