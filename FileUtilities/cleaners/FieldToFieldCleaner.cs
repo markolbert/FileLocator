@@ -4,20 +4,20 @@ using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
 
-public record MultiFieldUpdater<TEntity, TSrcProp, TTgtProp> : IFieldUpdater
+public record FieldToFieldCleaner<TEntity, TSrcProp, TTgtProp> : IFieldCleaner
     where TEntity : class
 {
     private readonly Func<TEntity, int> _keyGetter;
     private readonly Func<TEntity, TSrcProp?> _srcPropGetter;
     private readonly Func<TEntity, TTgtProp> _tgtPropGetter;
     private readonly Action<TEntity, TTgtProp> _tgtPropSetter;
-    private readonly List<Action<IFieldUpdater, IUpdateRecorder, TEntity>> _modifiers = [];
+    private readonly List<Action<IFieldCleaner, IUpdateRecorder, TEntity>> _cleaners = [];
 
     private readonly ILogger? _logger;
     private readonly bool _isCleaner;
     private readonly bool _tgtPropIsNullable;
 
-    public MultiFieldUpdater(
+    public FieldToFieldCleaner(
         Expression<Func<TEntity, int>> keyPropExpr,
         Expression<Func<TEntity, TSrcProp>> srcPropExpr,
         Expression<Func<TEntity, TTgtProp>> tgtPropExpr,
@@ -70,7 +70,6 @@ public record MultiFieldUpdater<TEntity, TSrcProp, TTgtProp> : IFieldUpdater
                                          existingValue?.ToString() ?? Globals.NullText,
                                          newValue?.ToString() ?? Globals.NullText );
         }
-
         else
         {
             UpdateRecorder.MarkAsInvalid( EntityType,
@@ -82,13 +81,13 @@ public record MultiFieldUpdater<TEntity, TSrcProp, TTgtProp> : IFieldUpdater
         _tgtPropSetter( entity, newValue );
     }
 
-    public void AddModifier( Action<IFieldUpdater, IUpdateRecorder, TEntity> modifier ) => _modifiers.Add( modifier );
+    public void AddCleaner( Action<IFieldCleaner, IUpdateRecorder, TEntity> modifier ) => _cleaners.Add( modifier );
 
     public void ProcessEntityFields( TEntity entity )
     {
-        foreach( var modifier in _modifiers )
+        foreach( var cleaner in _cleaners )
         {
-            modifier( this, UpdateRecorder, entity );
+            cleaner( this, UpdateRecorder, entity );
         }
     }
 
@@ -114,7 +113,7 @@ public record MultiFieldUpdater<TEntity, TSrcProp, TTgtProp> : IFieldUpdater
         return null;
     }
 
-    bool IFieldUpdater.TryGetKeyValue( object entity, out int key )
+    bool IFieldCleaner.TryGetKeyValue( object entity, out int key )
     {
         key = -1;
 
@@ -128,7 +127,7 @@ public record MultiFieldUpdater<TEntity, TSrcProp, TTgtProp> : IFieldUpdater
         return false;
     }
 
-    void IFieldUpdater.SetValue( object entity, object? newValue )
+    void IFieldCleaner.SetValue( object entity, object? newValue )
     {
         if( entity is not TEntity castEntity )
         {
@@ -151,7 +150,7 @@ public record MultiFieldUpdater<TEntity, TSrcProp, TTgtProp> : IFieldUpdater
         }
     }
 
-    void IFieldUpdater.ProcessEntityFields( object entity )
+    void IFieldCleaner.ProcessEntityFields( object entity )
     {
         if( entity is not TEntity castEntity )
         {

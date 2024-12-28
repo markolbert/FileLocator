@@ -3,10 +3,10 @@ using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
 
-public record FieldUpdater<TEntity, TSrcProp> : MultiFieldUpdater<TEntity, TSrcProp, TSrcProp>
+public record FieldCleaner<TEntity, TSrcProp> : FieldToFieldCleaner<TEntity, TSrcProp, TSrcProp>
     where TEntity : class
 {
-    public FieldUpdater(
+    public FieldCleaner(
         Expression<Func<TEntity, int>> keyPropExpr,
         Expression<Func<TEntity, TSrcProp>> srcPropExpr,
         IUpdateRecorder updateRecorder,

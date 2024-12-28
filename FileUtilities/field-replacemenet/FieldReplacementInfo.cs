@@ -1,6 +1,6 @@
 ﻿namespace J4JSoftware.FileUtilities;
 
-internal record TweakProperty<TEntity>( 
+internal record FieldReplacementInfo<TEntity>( 
     string Name, 
     Type PropertyType, 
     Func<TEntity, object?> GetValue, 

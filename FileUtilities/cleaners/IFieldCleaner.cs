@@ -1,6 +1,6 @@
 ﻿namespace J4JSoftware.FileUtilities;
 
-public interface IFieldUpdater
+public interface IFieldCleaner
 {
     Type EntityType { get; }
     string FieldName { get; }

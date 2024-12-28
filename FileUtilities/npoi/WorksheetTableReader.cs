@@ -12,11 +12,11 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
 {
     private readonly Dictionary<int, IImportedColumn> _columns = [];
     private readonly IRecordFilter<TEntity>? _filter;
-    private readonly IKeyedEntityUpdater<TEntity>? _entityUpdater;
+    private readonly IEntityCleaner<TEntity>? _entityUpdater;
 
     public WorksheetTableReader(
         IRecordFilter<TEntity>? filter = null,
-        IKeyedEntityUpdater<TEntity>? entityUpdater = null,
+        IEntityCleaner<TEntity>? entityUpdater = null,
         ILoggerFactory? loggerFactory = null
     )
     {
@@ -54,7 +54,7 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
                 Logger?.FailedToSetCellValue( kvp.Key, rowNum );
             }
 
-            _entityUpdater?.ProcessEntityFields( entity );
+            _entityUpdater?.CleanFields( entity );
 
             if( _filter == null || _filter.Include( entity ) )
                 yield return entity;
@@ -92,14 +92,14 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
         {
             sheet = workbook.GetSheet( context.SheetName );
 
-            if( _entityUpdater?.Tweaks == null )
+            if( _entityUpdater?.FieldReplacements == null )
                 return sheet != null
                  && ValidateColumns( context, sheet )
                  && ( _entityUpdater?.Initialize() ?? true )
                  && Initialize();
 
             if( !string.IsNullOrWhiteSpace( context.TweaksPath ) && File.Exists( context.TweaksPath ) )
-                _entityUpdater.Tweaks.Load( context.TweaksPath );
+                _entityUpdater.FieldReplacements.Load( context.TweaksPath );
             else
             {
                 if( string.IsNullOrWhiteSpace( context.TweaksPath ) )

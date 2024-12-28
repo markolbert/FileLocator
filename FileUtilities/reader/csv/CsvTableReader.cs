@@ -7,14 +7,14 @@ namespace J4JSoftware.FileUtilities;
 public class CsvTableReader : ITableReader
 {
     private readonly IRecordFilter<DataRecord>? _filter;
-    private readonly IKeyedEntityUpdater<DataRecord>? _entityUpdater;
+    private readonly IEntityCleaner<DataRecord>? _entityUpdater;
 
     private FileStream? _fs;
     private StreamReader? _reader;
 
     public CsvTableReader(
         IRecordFilter<DataRecord>? filter = null,
-        IKeyedEntityUpdater<DataRecord>? entityUpdater = null,
+        IEntityCleaner<DataRecord>? entityUpdater = null,
         ILoggerFactory? loggerFactory = null
     )
     {
@@ -79,7 +79,7 @@ public class CsvTableReader : ITableReader
 
             var curRecord = CreateDataRecord(context.ImportPath, headers);
 
-            _entityUpdater?.ProcessEntityFields(curRecord);
+            _entityUpdater?.CleanFields(curRecord);
 
             if (_filter != null && !_filter.Include(curRecord))
                 continue;
@@ -110,7 +110,7 @@ public class CsvTableReader : ITableReader
             return Initialize();
         }
 
-        if (_entityUpdater.Tweaks == null)
+        if (_entityUpdater.FieldReplacements == null)
             return _entityUpdater.Initialize() && Initialize();
 
         if (string.IsNullOrWhiteSpace(context.TweaksPath))
@@ -125,7 +125,7 @@ public class CsvTableReader : ITableReader
             return false;
         }
 
-        _entityUpdater.Tweaks.Load(context.TweaksPath!);
+        _entityUpdater.FieldReplacements.Load(context.TweaksPath!);
 
         return _entityUpdater.Initialize() && Initialize();
     }

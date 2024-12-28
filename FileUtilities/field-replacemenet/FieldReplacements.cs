@@ -6,29 +6,29 @@ using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
 
-public class Tweaks<TEntity> : ITweaks<TEntity>
+public class FieldReplacements<TEntity> : IFieldReplacements<TEntity>
     where TEntity : class
 {
     private readonly Func<TEntity, int> _keyGetter = null!;
     private readonly IUpdateRecorder? _updateRecorder;
-    private readonly Dictionary<int, Tweak> _tweaks = [];
-    private readonly Dictionary<string, TweakProperty<TEntity>> _tweakableProps = [];
+    private readonly Dictionary<int, FieldReplacementResults> _tweaks = [];
+    private readonly Dictionary<string, FieldReplacementInfo<TEntity>> _tweakableProps = [];
     private readonly ILoggerFactory? _loggerFactory;
     private readonly ILogger? _logger;
 
-    public Tweaks(
+    public FieldReplacements(
         DbContext dbContext,
         IUpdateRecorder? updateRecorder,
         ILoggerFactory? loggerFactory
     )
     {
         _loggerFactory = loggerFactory;
-        _logger = _loggerFactory?.CreateLogger<Tweaks<TEntity>>();
+        _logger = _loggerFactory?.CreateLogger<FieldReplacements<TEntity>>();
 
         _updateRecorder = updateRecorder;
 
         if( !dbContext.TryGetEntitySingleFieldPrimaryKey( typeof( TEntity ), out var keyField ) )
-            throw new FileUtilityException( typeof( Tweaks<TEntity> ),
+            throw new FileUtilityException( typeof( FieldReplacements<TEntity> ),
                                             "ctor",
                                             $"{typeof( TEntity )} is not part of {dbContext.GetType()} with a single field primary key" );
 
@@ -37,7 +37,7 @@ public class Tweaks<TEntity> : ITweaks<TEntity>
         foreach( var propInfo in typeof( TEntity ).GetProperties()
                                                   .Where(pi=>pi.CanWrite  ) )
         {
-            var parserType = propInfo.GetCustomAttribute<TweakParserAttribute>()?.ParserType;
+            var parserType = propInfo.GetCustomAttribute<FieldReplacementConverterAttribute>()?.ParserType;
 
             void Setter( TEntity entity, object value ) => propInfo.SetValue( entity, ConvertTextNull( value ) );
             object? Getter(TEntity entity) => propInfo.GetValue(entity);
@@ -47,12 +47,12 @@ public class Tweaks<TEntity> : ITweaks<TEntity>
                 if( propInfo.PropertyType == typeof( int ) )
                     _keyGetter = x => (int) Getter( x )!;
                 else
-                    throw new FileUtilityException(typeof(Tweaks<TEntity>),
+                    throw new FileUtilityException(typeof(FieldReplacements<TEntity>),
                                                    "ctor",
                                                    $"{typeof(TEntity).Name}::{propInfo.Name} is not an integer");
 
                 _tweakableProps.Add(propInfo.Name,
-                                    new TweakProperty<TEntity>(propInfo.Name,
+                                    new FieldReplacementInfo<TEntity>(propInfo.Name,
                                                                propInfo.PropertyType,
                                                                Getter,
                                                                null,
@@ -60,7 +60,7 @@ public class Tweaks<TEntity> : ITweaks<TEntity>
             }
             else
                 _tweakableProps.Add( propInfo.Name,
-                                     new TweakProperty<TEntity>( propInfo.Name,
+                                     new FieldReplacementInfo<TEntity>( propInfo.Name,
                                                                  propInfo.PropertyType,
                                                                  Getter,
                                                                  Setter,
@@ -83,12 +83,12 @@ public class Tweaks<TEntity> : ITweaks<TEntity>
             return false;
         }
 
-        var parser = new MultiRecordJsonFileReader<Tweak>( _loggerFactory );
+        var parser = new MultiRecordJsonFileReader<FieldReplacementResults>( _loggerFactory );
         parser.SerializerOptions.Converters.Add( new JsonTweakConverter<TEntity>( this, _loggerFactory ) );
 
         if( !parser.LoadFile( filePath ) )
         {
-            _logger?.Error( $"Parsing of {typeof( Tweaks<TEntity> )} failed" );
+            _logger?.Error( $"Parsing of {typeof( FieldReplacements<TEntity> )} failed" );
             return false;
         }
 
@@ -113,7 +113,7 @@ public class Tweaks<TEntity> : ITweaks<TEntity>
     }
 
     public string KeyFieldName { get; }
-    public ReadOnlyDictionary<int, Tweak> Collection => new ( _tweaks );
+    public ReadOnlyDictionary<int, FieldReplacementResults> Collection => new ( _tweaks );
     public bool AllComplete => _tweaks.All( kvp => kvp.Value.IsComplete );
 
     public void ApplyTweaks( TEntity entity )
@@ -154,9 +154,9 @@ public class Tweaks<TEntity> : ITweaks<TEntity>
         }
     }
 
-    internal bool TryGetTweakInfo(string propName, out TweakProperty<TEntity>? tweakInfo) => _tweakableProps.TryGetValue(propName, out tweakInfo);
+    internal bool TryGetTweakInfo(string propName, out FieldReplacementInfo<TEntity>? tweakInfo) => _tweakableProps.TryGetValue(propName, out tweakInfo);
 
-    void ITweaks.ApplyTweaks( object entity )
+    void IFieldReplacements.ApplyTweaks( object entity )
     {
         if( entity is TEntity castEntity )
             ApplyTweaks( castEntity );

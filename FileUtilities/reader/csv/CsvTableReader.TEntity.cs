@@ -10,7 +10,7 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
     where TEntity : class, new()
 {
     private readonly IRecordFilter<TEntity>? _filter;
-    private readonly IKeyedEntityUpdater<TEntity>? _entityUpdater;
+    private readonly IEntityCleaner<TEntity>? _entityUpdater;
 
     private FileStream? _fs;
     private StreamReader? _reader;
@@ -18,7 +18,7 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
 
     public CsvTableReader(
         IRecordFilter<TEntity>? filter = null,
-        IKeyedEntityUpdater<TEntity>? entityUpdater = null,
+        IEntityCleaner<TEntity>? entityUpdater = null,
         ILoggerFactory? loggerFactory = null
         )
     {
@@ -72,7 +72,7 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
         foreach( var record in _csvReader.GetRecords<TEntity>()
                                          .Where( x => ( _filter == null || _filter.Include( x ) ) ) )
         {
-            _entityUpdater?.ProcessEntityFields( record );
+            _entityUpdater?.CleanFields( record );
 
             yield return record;
         }
@@ -131,7 +131,7 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
             return Initialize();
         }
 
-        if (_entityUpdater.Tweaks == null)
+        if (_entityUpdater.FieldReplacements == null)
             return _entityUpdater.Initialize() && Initialize();
 
         if( string.IsNullOrWhiteSpace( context.TweaksPath ) )
@@ -146,7 +146,7 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
             return false;
         }
 
-        _entityUpdater.Tweaks.Load(context.TweaksPath!);
+        _entityUpdater.FieldReplacements.Load(context.TweaksPath!);
 
         return _entityUpdater.Initialize() && Initialize();
     }

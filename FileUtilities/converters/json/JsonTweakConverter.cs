@@ -6,16 +6,16 @@ using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
 
-public class JsonTweakConverter<TEntity>( Tweaks<TEntity> tweaks, ILoggerFactory? loggerFactory ) : JsonConverter<Tweak>
+public class JsonTweakConverter<TEntity>( FieldReplacements<TEntity> fieldReplacements, ILoggerFactory? loggerFactory ) : JsonConverter<FieldReplacementResults>
     where TEntity : class
 {
     private readonly ILogger? _logger = loggerFactory?.CreateLogger<JsonTweakConverter<TEntity>>();
-    private readonly Dictionary<Type, ITweakParser> _tweakParsers = [];
+    private readonly Dictionary<Type, IFieldReplacementConverter> _tweakParsers = [];
 
-    public override Tweak Read( ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options )
+    public override FieldReplacementResults Read( ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options )
     {
         // defaults to IsComplete == true
-        var retVal = new Tweak();
+        var retVal = new FieldReplacementResults();
         var priorPropName = string.Empty;
 
         while( reader.TokenType != JsonTokenType.EndObject )
@@ -45,7 +45,7 @@ public class JsonTweakConverter<TEntity>( Tweaks<TEntity> tweaks, ILoggerFactory
                                                 nameof( Read ),
                                                 $"Repeating processing property '{propName}'; contact support" );
 
-            if( !tweaks.TryGetTweakInfo(propName ?? string.Empty, out var tweakInfo ) )
+            if( !fieldReplacements.TryGetTweakInfo(propName ?? string.Empty, out var tweakInfo ) )
             {
                 _logger?.PropertyNotFound( typeof( TEntity ), propName ?? "<undefined>" );
                 retVal.IsComplete = false;
@@ -61,7 +61,7 @@ public class JsonTweakConverter<TEntity>( Tweaks<TEntity> tweaks, ILoggerFactory
             {
                 if( !_tweakParsers.TryGetValue( tweakInfo.PropertyType, out var parser ) )
                 {
-                    parser = (ITweakParser) Activator.CreateInstance( tweakInfo.ParserType )!;
+                    parser = (IFieldReplacementConverter) Activator.CreateInstance( tweakInfo.ParserType )!;
                     _tweakParsers.Add( tweakInfo.PropertyType, parser );
                 }
 
@@ -91,7 +91,7 @@ public class JsonTweakConverter<TEntity>( Tweaks<TEntity> tweaks, ILoggerFactory
             }
 
             // don't store the key as a change
-            if( tweaks.KeyFieldName.Equals( tweakInfo.Name ) )
+            if( fieldReplacements.KeyFieldName.Equals( tweakInfo.Name ) )
             {
                 if( propValue is not int keyValue )
                 {
@@ -115,7 +115,7 @@ public class JsonTweakConverter<TEntity>( Tweaks<TEntity> tweaks, ILoggerFactory
         return retVal;
     }
 
-    private object? GetPropertyValue( ref Utf8JsonReader reader, TweakProperty<TEntity> propInfo ) =>
+    private object? GetPropertyValue( ref Utf8JsonReader reader, FieldReplacementInfo<TEntity> propInfo ) =>
         Type.GetTypeCode( propInfo.PropertyType ) switch
         {
             TypeCode.Boolean when reader.TokenType is JsonTokenType.True or JsonTokenType.False
@@ -165,11 +165,11 @@ public class JsonTweakConverter<TEntity>( Tweaks<TEntity> tweaks, ILoggerFactory
         return false;
     }
 
-    public override void Write( Utf8JsonWriter writer, Tweak tweak, JsonSerializerOptions options )
+    public override void Write( Utf8JsonWriter writer, FieldReplacementResults fieldReplacementResults, JsonSerializerOptions options )
     {
-        writer.WriteNumber( tweaks.KeyFieldName, tweak.Key );
+        writer.WriteNumber( fieldReplacements.KeyFieldName, fieldReplacementResults.Key );
 
-        foreach( var kvp in tweak.Changes )
+        foreach( var kvp in fieldReplacementResults.Changes )
         {
             switch( kvp.Value )
             {

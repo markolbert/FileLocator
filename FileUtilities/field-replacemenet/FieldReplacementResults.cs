@@ -1,6 +1,6 @@
 ﻿namespace J4JSoftware.FileUtilities;
 
-public class Tweak
+public class FieldReplacementResults
 {
     public int Key { get; set; }
     public Dictionary<string, object> Changes { get; } = [];

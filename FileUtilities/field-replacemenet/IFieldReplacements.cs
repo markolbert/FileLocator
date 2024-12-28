@@ -2,10 +2,10 @@
 
 namespace J4JSoftware.FileUtilities;
 
-public interface ITweaks
+public interface IFieldReplacements
 {
     string KeyFieldName { get; }
-    ReadOnlyDictionary<int, Tweak> Collection { get; }
+    ReadOnlyDictionary<int, FieldReplacementResults> Collection { get; }
     bool AllComplete { get; }
 
     bool Load(string filePath);
@@ -13,7 +13,7 @@ public interface ITweaks
     void ApplyTweaks( object entity );
 }
 
-public interface ITweaks<in TEntity> : ITweaks
+public interface IFieldReplacements<in TEntity> : IFieldReplacements
     where TEntity : class
 {
     void ApplyTweaks( TEntity entity );

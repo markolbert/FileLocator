@@ -3,18 +3,18 @@ using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
 
-public class KeyedEntityUpdater<TEntity> : IKeyedEntityUpdater<TEntity>
+public class EntityCleaner<TEntity> : IEntityCleaner<TEntity>
     where TEntity : class
 {
-    private readonly List<IFieldUpdater> _fieldProcessors = [];
+    private readonly List<IFieldCleaner> _fieldProcessors = [];
 
-    protected KeyedEntityUpdater(
+    protected EntityCleaner(
         IUpdateRecorder updateRecorder,
-        ITweaks<TEntity>? tweaks,
+        IFieldReplacements<TEntity>? fieldReplacements,
         ILoggerFactory? loggerFactory
     )
     {
-        Tweaks = tweaks;
+        FieldReplacements = fieldReplacements;
         UpdateRecorder = updateRecorder;
 
         LoggerFactory = loggerFactory;
@@ -24,7 +24,7 @@ public class KeyedEntityUpdater<TEntity> : IKeyedEntityUpdater<TEntity>
     protected ILoggerFactory? LoggerFactory { get; }
     protected ILogger? Logger { get; }
 
-    public ITweaks? Tweaks { get; }
+    public IFieldReplacements? FieldReplacements { get; }
 
     public IUpdateRecorder UpdateRecorder { get; }
     public Type EntityType => typeof( TEntity );
@@ -34,15 +34,15 @@ public class KeyedEntityUpdater<TEntity> : IKeyedEntityUpdater<TEntity>
     protected void AddFieldCleaner<TTgtProp>(
         Expression<Func<TEntity, int>> keyExpr,
         Expression<Func<TEntity, TTgtProp>> propExpr,
-        params Action<IFieldUpdater, IUpdateRecorder, TEntity>[] modifiers
+        params Action<IFieldCleaner, IUpdateRecorder, TEntity>[] cleaners
     )
     {
-        var fieldProcessor = new FieldUpdater<TEntity, TTgtProp>( keyExpr, propExpr, UpdateRecorder, true, LoggerFactory );
+        var fieldProcessor = new FieldCleaner<TEntity, TTgtProp>( keyExpr, propExpr, UpdateRecorder, true, LoggerFactory );
         _fieldProcessors.Add( fieldProcessor );
 
-        foreach( var modifier in modifiers )
+        foreach( var modifier in cleaners )
         {
-            fieldProcessor.AddModifier( modifier );
+            fieldProcessor.AddCleaner( modifier );
         }
     }
 
@@ -50,11 +50,11 @@ public class KeyedEntityUpdater<TEntity> : IKeyedEntityUpdater<TEntity>
         Expression<Func<TEntity, int>> keyExpr,
         Expression<Func<TEntity, TSrcProp>> srcPropExpr,
         Expression<Func<TEntity, TTgtProp>> tgtPropExpr,
-        params Action<IFieldUpdater, IUpdateRecorder, TEntity>[] modifiers
+        params Action<IFieldCleaner, IUpdateRecorder, TEntity>[] cleaners
     )
     {
         var fieldProcessor =
-            new MultiFieldUpdater<TEntity, TSrcProp, TTgtProp>( keyExpr,
+            new FieldToFieldCleaner<TEntity, TSrcProp, TTgtProp>( keyExpr,
                                                                 srcPropExpr,
                                                                 tgtPropExpr,
                                                                 UpdateRecorder,
@@ -62,15 +62,15 @@ public class KeyedEntityUpdater<TEntity> : IKeyedEntityUpdater<TEntity>
                                                                 LoggerFactory );
         _fieldProcessors.Add( fieldProcessor );
 
-        foreach( var modifier in modifiers )
+        foreach( var modifier in cleaners )
         {
-            fieldProcessor.AddModifier( modifier );
+            fieldProcessor.AddCleaner( modifier );
         }
     }
 
-    public virtual void ProcessEntityFields( TEntity entity )
+    public virtual void CleanFields( TEntity entity )
     {
-        Tweaks?.ApplyTweaks(entity);
+        FieldReplacements?.ApplyTweaks(entity);
 
         foreach ( var processor in _fieldProcessors )
         {
@@ -78,10 +78,10 @@ public class KeyedEntityUpdater<TEntity> : IKeyedEntityUpdater<TEntity>
         }
     }
 
-    void IKeyedEntityUpdater.ProcessEntityFields( object entity )
+    void IEntityCleaner.CleanFields( object entity )
     {
         if( entity is TEntity castEntity )
-            ProcessEntityFields(castEntity);
+            CleanFields(castEntity);
         else Logger?.UnexpectedType( typeof( TEntity), entity.GetType() );
     }
 }
