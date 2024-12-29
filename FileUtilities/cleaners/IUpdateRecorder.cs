@@ -8,6 +8,8 @@ public interface IUpdateRecorder
 
     bool MarkAsInvalid( Type entityType, int keyValue, string fieldName, string? fieldValue );
 
+    bool MarkAsDuplicate(Type entityType, int keyValue, string fieldName);
+
     bool SaveChanges();
 }
 
