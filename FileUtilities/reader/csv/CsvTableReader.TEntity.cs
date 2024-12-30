@@ -10,7 +10,7 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
     where TEntity : class, new()
 {
     private readonly IRecordFilter<TEntity>? _filter;
-    private readonly IEntityCleaner<TEntity>? _entityUpdater;
+    private readonly IEntityCleaner<TEntity>? _cleaner;
 
     private FileStream? _fs;
     private StreamReader? _reader;
@@ -18,12 +18,12 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
 
     public CsvTableReader(
         IRecordFilter<TEntity>? filter = null,
-        IEntityCleaner<TEntity>? entityUpdater = null,
+        IEntityCleaner<TEntity>? cleaner = null,
         ILoggerFactory? loggerFactory = null
         )
     {
         _filter = filter;
-        _entityUpdater = entityUpdater;
+        _cleaner = cleaner;
 
         LoggerFactory = loggerFactory;
         Logger = loggerFactory?.CreateLogger( GetType() );
@@ -72,7 +72,7 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
         foreach( var record in _csvReader.GetRecords<TEntity>()
                                          .Where( x => ( _filter == null || _filter.Include( x ) ) ) )
         {
-            _entityUpdater?.CleanFields( record );
+            _cleaner?.CleanFields( record );
 
             yield return record;
         }
@@ -123,7 +123,7 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
                 propMap.TypeConverter(converter);
         }
 
-        if( _entityUpdater == null )
+        if( _cleaner == null )
         {
             if (!string.IsNullOrWhiteSpace(context.ImportPath) && File.Exists(context.TweaksPath))
                 Logger?.UnneededTweaksFile(GetType(), context.TweaksPath);
@@ -131,8 +131,8 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
             return Initialize();
         }
 
-        if (_entityUpdater.FieldReplacements == null)
-            return _entityUpdater.Initialize() && Initialize();
+        if (_cleaner.FieldReplacements == null)
+            return _cleaner.Initialize() && Initialize();
 
         if( string.IsNullOrWhiteSpace( context.TweaksPath ) )
         {
@@ -146,9 +146,9 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
             return false;
         }
 
-        _entityUpdater.FieldReplacements.Load(context.TweaksPath!);
+        _cleaner.FieldReplacements.Load(context.TweaksPath!);
 
-        return _entityUpdater.Initialize() && Initialize();
+        return _cleaner.Initialize() && Initialize();
     }
 
     protected virtual void CompleteImport()
@@ -162,7 +162,7 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
         }
 
         // save whatever changes/updates were recorded
-        _entityUpdater?.UpdateRecorder.SaveChanges();
+        _cleaner?.UpdateRecorder.SaveChanges();
     }
 
     public void Dispose()
