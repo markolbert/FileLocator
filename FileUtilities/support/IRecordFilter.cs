@@ -2,6 +2,7 @@
 
 public interface IRecordFilter
 {
+    bool Initialize();
     bool Include( object? record );
 }
 

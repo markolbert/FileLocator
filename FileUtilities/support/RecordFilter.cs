@@ -14,6 +14,8 @@ public class RecordFilter<TRaw> : IRecordFilter<TRaw>
         _logger = loggerFactory?.CreateLogger( GetType() );
     }
 
+    public virtual bool Initialize() => true;
+
     public virtual bool Include( TRaw record ) => true;
 
     bool IRecordFilter.Include( object? record )
