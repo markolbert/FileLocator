@@ -7,19 +7,19 @@ namespace J4JSoftware.FileUtilities;
 public class CsvTableReader : ITableReader
 {
     private readonly IRecordFilter<DataRecord>? _filter;
-    private readonly IEntityCleaner<DataRecord>? _entityUpdater;
+    private readonly IEntityCleaner<DataRecord>? _cleaner;
 
     private FileStream? _fs;
     private StreamReader? _reader;
 
     public CsvTableReader(
         IRecordFilter<DataRecord>? filter = null,
-        IEntityCleaner<DataRecord>? entityUpdater = null,
+        IEntityCleaner<DataRecord>? cleaner = null,
         ILoggerFactory? loggerFactory = null
     )
     {
         _filter = filter;
-        _entityUpdater = entityUpdater;
+        _cleaner = cleaner;
 
         LoggerFactory = loggerFactory;
         Logger = loggerFactory?.CreateLogger(GetType());
@@ -35,8 +35,39 @@ public class CsvTableReader : ITableReader
 
     public IEnumerable<DataRecord> GetData( ImportContext context )
     {
-        if( !InitializeInternal(context) )
+        if (!File.Exists(context.ImportPath))
+        {
+            Logger?.FileNotFound(context.ImportPath);
             yield break;
+        }
+
+        if( _cleaner?.FieldReplacements != null )
+        {
+            // if the cleaner has field replacements (tweaks),
+            // load the file that specifies what they are
+            if( !File.Exists( context.TweaksPath ) )
+            {
+                Logger?.FileNotFound( context.TweaksPath ?? string.Empty );
+                yield break;
+            }
+
+            _cleaner.FieldReplacements.Load( context.TweaksPath! );
+        }
+
+        // initialize the cleaner if it exists
+        if( !_cleaner?.Initialize() ?? false )
+            yield break;
+
+        // initialize the filter, if one exists
+        if( !_filter?.Initialize() ?? false )
+            yield break;
+
+        // finally, complete whatever custom reader initialization
+        // may be defined
+        if( !Initialize() )
+            yield break;
+
+        CurrentRecord = 0;
 
         try
         {
@@ -79,7 +110,7 @@ public class CsvTableReader : ITableReader
 
             var curRecord = CreateDataRecord(context.ImportPath, headers);
 
-            _entityUpdater?.CleanFields(curRecord);
+            _cleaner?.CleanFields(curRecord);
 
             if (_filter != null && !_filter.Include(curRecord))
                 continue;
@@ -92,43 +123,30 @@ public class CsvTableReader : ITableReader
 
     protected virtual bool Initialize() => true;
 
-    private bool InitializeInternal( ImportContext context )
-    {
-        CurrentRecord = 0;
+    //private bool InitializeInternal( ImportContext context )
+    //{
+    //    if (_cleaner == null)
+    //        return Initialize();
 
-        if (!File.Exists(context.ImportPath))
-        {
-            Logger?.FileNotFound(context.ImportPath);
-            return false;
-        }
+    //    if (_cleaner.FieldReplacements == null)
+    //        return _cleaner.Initialize() && Initialize();
 
-        if (_entityUpdater == null)
-        {
-            if ( !string.IsNullOrWhiteSpace(context.TweaksPath) && File.Exists(context.TweaksPath))
-                Logger?.UnneededTweaksFile(GetType(), context.TweaksPath);
+    //    if (string.IsNullOrWhiteSpace(context.TweaksPath))
+    //    {
+    //        Logger?.UndefinedPath(nameof(CsvTableReader));
+    //        return false;
+    //    }
 
-            return Initialize();
-        }
+    //    if (!File.Exists(context.TweaksPath))
+    //    {
+    //        Logger?.FileNotFound(context.TweaksPath);
+    //        return false;
+    //    }
 
-        if (_entityUpdater.FieldReplacements == null)
-            return _entityUpdater.Initialize() && Initialize();
+    //    _cleaner.FieldReplacements.Load(context.TweaksPath!);
 
-        if (string.IsNullOrWhiteSpace(context.TweaksPath))
-        {
-            Logger?.UndefinedPath(nameof(CsvTableReader));
-            return false;
-        }
-
-        if (!File.Exists(context.TweaksPath))
-        {
-            Logger?.FileNotFound(context.TweaksPath);
-            return false;
-        }
-
-        _entityUpdater.FieldReplacements.Load(context.TweaksPath!);
-
-        return _entityUpdater.Initialize() && Initialize();
-    }
+    //    return _cleaner.Initialize() && Initialize();
+    //}
 
     // CsvReader will always be non-null when this is called
     protected virtual DataRecord CreateDataRecord(string importPath, List<string> headers )
@@ -157,7 +175,7 @@ public class CsvTableReader : ITableReader
         }
 
         // save whatever changes/updates were recorded
-        _entityUpdater?.UpdateRecorder.SaveChanges();
+        _cleaner?.UpdateRecorder.SaveChanges();
     }
 
     public void Dispose()
