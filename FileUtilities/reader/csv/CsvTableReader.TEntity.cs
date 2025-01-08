@@ -10,7 +10,7 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
     where TEntity : class, new()
 {
     private readonly IRecordFilter<TEntity>? _filter;
-    private readonly IEntityCleaner<TEntity>? _cleaner;
+    private readonly IEntityPropertyAdjuster<TEntity>? _propAdjuster;
 
     private FileStream? _fs;
     private StreamReader? _reader;
@@ -18,12 +18,12 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
 
     public CsvTableReader(
         IRecordFilter<TEntity>? filter = null,
-        IEntityCleaner<TEntity>? cleaner = null,
+        IEntityPropertyAdjuster<TEntity>? propAdjuster = null,
         ILoggerFactory? loggerFactory = null
         )
     {
         _filter = filter;
-        _cleaner = cleaner;
+        _propAdjuster = propAdjuster;
 
         LoggerFactory = loggerFactory;
         Logger = loggerFactory?.CreateLogger( GetType() );
@@ -41,23 +41,6 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
             Logger?.FileNotFound(context.ImportPath);
             yield break;
         }
-
-        if (_cleaner?.FieldReplacements != null)
-        {
-            // if the cleaner has field replacements (tweaks),
-            // load the file that specifies what they are
-            if (!File.Exists(context.TweaksPath))
-            {
-                Logger?.FileNotFound(context.TweaksPath ?? string.Empty);
-                yield break;
-            }
-
-            _cleaner.FieldReplacements.Load(context.TweaksPath!);
-        }
-
-        // initialize the cleaner if it exists
-        if (!_cleaner?.Initialize() ?? false)
-            yield break;
 
         // initialize the filter, if one exists
         if (!_filter?.Initialize() ?? false)
@@ -108,7 +91,8 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
         foreach( var record in _csvReader.GetRecords<TEntity>()
                                          .Where( x => ( _filter == null || _filter.Include( x ) ) ) )
         {
-            _cleaner?.CleanFields( record );
+            if( !_propAdjuster?.AdjustEntity( record ) ?? false )
+                yield break;
 
             yield return record;
         }
@@ -231,7 +215,7 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
         }
 
         // save whatever changes/updates were recorded
-        _cleaner?.UpdateRecorder.SaveChanges();
+        _propAdjuster?.SaveAdjustmentInfo();
     }
 
     public void Dispose()

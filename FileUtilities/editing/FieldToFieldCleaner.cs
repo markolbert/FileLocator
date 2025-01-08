@@ -1,5 +1,6 @@
 ﻿using System.Linq.Expressions;
 using J4JSoftware.Utilities;
+using MathNet.Numerics.Statistics.Mcmc;
 using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
@@ -21,7 +22,6 @@ public record FieldToFieldCleaner<TEntity, TSrcProp, TTgtProp> : IFieldCleaner
         Expression<Func<TEntity, int>> keyPropExpr,
         Expression<Func<TEntity, TSrcProp>> srcPropExpr,
         Expression<Func<TEntity, TTgtProp>> tgtPropExpr,
-        IUpdateRecorder updateRecorder,
         bool isCleaner,
         ILoggerFactory? loggerFactory
     )
@@ -48,15 +48,12 @@ public record FieldToFieldCleaner<TEntity, TSrcProp, TTgtProp> : IFieldCleaner
                                             "ctor",
                                             $"Could not create target property setter from {tgtPropExpr}" );
 
-        UpdateRecorder = updateRecorder;
         _isCleaner = isCleaner;
         _tgtPropIsNullable = typeof( TTgtProp ).IsClass;
     }
 
     public Type EntityType => typeof( TEntity );
     public string FieldName { get; }
-
-    public IUpdateRecorder UpdateRecorder { get; }
 
     private void SetValue( TEntity entity, TTgtProp newValue )
     {

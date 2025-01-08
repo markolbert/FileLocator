@@ -10,12 +10,14 @@ public class EntityCleaner<TEntity> : IEntityCleaner<TEntity>
 
     protected EntityCleaner(
         IUpdateRecorder updateRecorder,
+        IUpdateRecorder2 updateRecorder2,
         IFieldReplacements<TEntity>? fieldReplacements,
         ILoggerFactory? loggerFactory
     )
     {
         FieldReplacements = fieldReplacements;
         UpdateRecorder = updateRecorder;
+        UpdateRecorder2 = updateRecorder2;
 
         LoggerFactory = loggerFactory;
         Logger = loggerFactory?.CreateLogger( GetType() );
@@ -27,6 +29,7 @@ public class EntityCleaner<TEntity> : IEntityCleaner<TEntity>
     public IFieldReplacements? FieldReplacements { get; }
 
     public IUpdateRecorder UpdateRecorder { get; }
+    public IUpdateRecorder2 UpdateRecorder2 { get; }
     public Type EntityType => typeof( TEntity );
 
     public virtual bool Initialize() => true;
@@ -34,7 +37,7 @@ public class EntityCleaner<TEntity> : IEntityCleaner<TEntity>
     protected void AddFieldCleaner<TTgtProp>(
         Expression<Func<TEntity, int>> keyExpr,
         Expression<Func<TEntity, TTgtProp>> propExpr,
-        params Action<IFieldCleaner, IUpdateRecorder, TEntity>[] cleaners
+        params Func<IFieldCleaner, TEntity, CleanerResult>[] cleaners
     )
     {
         var fieldProcessor = new FieldCleaner<TEntity, TTgtProp>( keyExpr, propExpr, UpdateRecorder, true, LoggerFactory );
@@ -50,7 +53,7 @@ public class EntityCleaner<TEntity> : IEntityCleaner<TEntity>
         Expression<Func<TEntity, int>> keyExpr,
         Expression<Func<TEntity, TSrcProp>> srcPropExpr,
         Expression<Func<TEntity, TTgtProp>> tgtPropExpr,
-        params Action<IFieldCleaner, IUpdateRecorder, TEntity>[] cleaners
+        params Func<IFieldCleaner, TEntity, CleanerResult>[] cleaners
     )
     {
         var fieldProcessor =

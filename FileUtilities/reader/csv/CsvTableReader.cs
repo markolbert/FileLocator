@@ -7,19 +7,19 @@ namespace J4JSoftware.FileUtilities;
 public class CsvTableReader : ITableReader
 {
     private readonly IRecordFilter<DataRecord>? _filter;
-    private readonly IEntityCleaner<DataRecord>? _cleaner;
+    private readonly IEntityPropertyAdjuster<DataRecord>? _propAdjuster;
 
     private FileStream? _fs;
     private StreamReader? _reader;
 
     public CsvTableReader(
         IRecordFilter<DataRecord>? filter = null,
-        IEntityCleaner<DataRecord>? cleaner = null,
+        IEntityPropertyAdjuster<DataRecord>? propAdjuster = null,
         ILoggerFactory? loggerFactory = null
     )
     {
         _filter = filter;
-        _cleaner = cleaner;
+        _propAdjuster = propAdjuster;
 
         LoggerFactory = loggerFactory;
         Logger = loggerFactory?.CreateLogger(GetType());
@@ -40,23 +40,6 @@ public class CsvTableReader : ITableReader
             Logger?.FileNotFound(context.ImportPath);
             yield break;
         }
-
-        if( _cleaner?.FieldReplacements != null )
-        {
-            // if the cleaner has field replacements (tweaks),
-            // load the file that specifies what they are
-            if( !File.Exists( context.TweaksPath ) )
-            {
-                Logger?.FileNotFound( context.TweaksPath ?? string.Empty );
-                yield break;
-            }
-
-            _cleaner.FieldReplacements.Load( context.TweaksPath! );
-        }
-
-        // initialize the cleaner if it exists
-        if( !_cleaner?.Initialize() ?? false )
-            yield break;
 
         // initialize the filter, if one exists
         if( !_filter?.Initialize() ?? false )
@@ -110,7 +93,8 @@ public class CsvTableReader : ITableReader
 
             var curRecord = CreateDataRecord(context.ImportPath, headers);
 
-            _cleaner?.CleanFields(curRecord);
+            if( !_propAdjuster?.AdjustEntity( curRecord ) ?? false )
+                yield break;
 
             if (_filter != null && !_filter.Include(curRecord))
                 continue;
@@ -175,7 +159,7 @@ public class CsvTableReader : ITableReader
         }
 
         // save whatever changes/updates were recorded
-        _cleaner?.UpdateRecorder.SaveChanges();
+        _propAdjuster?.SaveAdjustmentInfo();
     }
 
     public void Dispose()

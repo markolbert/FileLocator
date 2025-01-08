@@ -1,5 +1,8 @@
 ﻿using System.Runtime.CompilerServices;
+using MathNet.Numerics.Statistics.Mcmc;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Logging;
+using NPOI.POIFS.FileSystem;
 
 namespace J4JSoftware.FileUtilities;
 
@@ -288,4 +291,34 @@ internal static partial class InternalLogMessages
     );
 
     #endregion
+
+    [LoggerMessage(LogLevel.Error, "{caller}: Could not create instance of {adjusterType} on entity {entityType} for property {propName}")]
+    internal static partial void FieldAdjusterNotCreated(
+        this ILogger logger,
+        Type entityType,
+        string propName,
+    Type adjusterType,
+    [ CallerMemberName ] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Error, "{caller}: Could not get value for property {propName} ({propType}) on entity {entityType}, message was '{mesg}' ")]
+    internal static partial void CouldNotGetValue(
+        this ILogger logger,
+        Type entityType,
+        string propName,
+        Type propType,
+        string mesg,
+        [ CallerMemberName ] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Error, "{caller}: Could not set value '{value}' to property {propName} ({propType}) on entity {entityType}, message was '{mesg}' ")]
+    internal static partial void CouldNotSetValue(
+        this ILogger logger,
+        Type entityType,
+        string propName,
+        Type propType,
+        string value,
+        string mesg,
+        [CallerMemberName] string caller = ""
+    );
 }

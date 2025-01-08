@@ -12,11 +12,11 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
 {
     private readonly Dictionary<int, IImportedColumn> _columns = [];
     private readonly IRecordFilter<TEntity>? _filter;
-    private readonly IEntityCleaner<TEntity>? _entityUpdater;
+    private readonly IEntityPropertyAdjuster<TEntity>? _propAdjuster;
 
     public WorksheetTableReader(
         IRecordFilter<TEntity>? filter = null,
-        IEntityCleaner<TEntity>? entityUpdater = null,
+        IEntityPropertyAdjuster<TEntity>? propAdjuster = null,
         ILoggerFactory? loggerFactory = null
     )
     {
@@ -24,7 +24,7 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
         Logger = LoggerFactory?.CreateLogger( GetType() );
 
         _filter = filter;
-        _entityUpdater = entityUpdater;
+        _propAdjuster = propAdjuster;
     }
 
     protected ILoggerFactory? LoggerFactory { get; }
@@ -54,7 +54,8 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
                 Logger?.FailedToSetCellValue( kvp.Key, rowNum );
             }
 
-            _entityUpdater?.CleanFields( entity );
+            if( !_propAdjuster?.AdjustEntity( entity ) ?? false )
+                yield break;
 
             if( _filter == null || _filter.Include( entity ) )
                 yield return entity;
@@ -92,26 +93,8 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
         {
             sheet = workbook.GetSheet( context.SheetName );
 
-            if( _entityUpdater?.FieldReplacements == null )
-                return sheet != null
-                 && ValidateColumns( context, sheet )
-                 && ( _entityUpdater?.Initialize() ?? true )
-                 && Initialize();
-
-            if( !string.IsNullOrWhiteSpace( context.TweaksPath ) && File.Exists( context.TweaksPath ) )
-                _entityUpdater.FieldReplacements.Load( context.TweaksPath );
-            else
-            {
-                if( string.IsNullOrWhiteSpace( context.TweaksPath ) )
-                    Logger?.UndefinedPath( nameof( WorksheetTableReader<TEntity, TContext> ) );
-                else Logger?.FileNotFound( context.TweaksPath );
-
-                return false;
-            }
-
             return sheet != null
              && ValidateColumns( context, sheet )
-             && ( _entityUpdater?.Initialize() ?? true )
              && Initialize();
         }
         catch( Exception ex )
@@ -230,7 +213,7 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
     protected virtual void CompleteImport()
     {
         // save whatever changes/updates were recorded
-        _entityUpdater?.UpdateRecorder.SaveChanges();
+        _propAdjuster?.SaveAdjustmentInfo();
     }
 
     public void Dispose()
