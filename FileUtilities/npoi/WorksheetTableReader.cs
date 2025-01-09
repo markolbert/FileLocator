@@ -12,11 +12,11 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
 {
     private readonly Dictionary<int, IImportedColumn> _columns = [];
     private readonly IRecordFilter<TEntity>? _filter;
-    private readonly IEntityPropertyAdjuster<TEntity>? _propAdjuster;
+    private readonly IEntityCorrector<TEntity>? _propAdjuster;
 
     public WorksheetTableReader(
         IRecordFilter<TEntity>? filter = null,
-        IEntityPropertyAdjuster<TEntity>? propAdjuster = null,
+        IEntityCorrector<TEntity>? propAdjuster = null,
         ILoggerFactory? loggerFactory = null
     )
     {

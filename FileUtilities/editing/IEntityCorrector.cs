@@ -2,7 +2,7 @@
 
 namespace J4JSoftware.FileUtilities;
 
-public interface IEntityPropertyAdjuster
+public interface IEntityCorrector
 {
     Type EntityType { get; }
 
@@ -10,7 +10,7 @@ public interface IEntityPropertyAdjuster
     void SaveAdjustmentInfo();
 }
 
-public interface IEntityPropertyAdjuster<in TEntity> : IEntityPropertyAdjuster
+public interface IEntityCorrector<in TEntity> : IEntityCorrector
     where TEntity : class
 {
     bool AdjustEntity( TEntity entity );

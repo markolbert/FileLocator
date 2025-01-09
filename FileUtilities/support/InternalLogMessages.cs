@@ -293,12 +293,20 @@ internal static partial class InternalLogMessages
     #endregion
 
     [LoggerMessage(LogLevel.Error, "{caller}: Could not create instance of {adjusterType} on entity {entityType} for property {propName}")]
-    internal static partial void FieldAdjusterNotCreated(
+    internal static partial void PropertyAdjusterNotCreated(
         this ILogger logger,
         Type entityType,
         string propName,
     Type adjusterType,
     [ CallerMemberName ] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Error, "{caller}: Could not create instance of {adjusterType} on entity {entityType}")]
+    internal static partial void RecordAdjusterNotCreated(
+        this ILogger logger,
+        Type entityType,
+        Type adjusterType,
+        [CallerMemberName] string caller = ""
     );
 
     [LoggerMessage(LogLevel.Error, "{caller}: Could not get value for property {propName} ({propType}) on entity {entityType}, message was '{mesg}' ")]
@@ -319,6 +327,21 @@ internal static partial class InternalLogMessages
         Type propType,
         string value,
         string mesg,
+        [CallerMemberName] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Critical, "{caller}: Could not create {filterType}")]
+    internal static partial void CannotCreateEntityFilter(
+        this ILogger logger,
+        Type filterType,
+        [ CallerMemberName ] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Critical, "{caller}: Expected a {correct} but got a {incorrect}")]
+    internal static partial void IncorrectEntityFilterType(
+        this ILogger logger,
+        Type incorrect,
+        Type correct,
         [CallerMemberName] string caller = ""
     );
 }

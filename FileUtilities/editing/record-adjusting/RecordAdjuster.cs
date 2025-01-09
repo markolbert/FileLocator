@@ -2,22 +2,10 @@
 
 namespace J4JSoftware.FileUtilities;
 
-public interface IRecordUpdater
-{
-    Type EntityType { get; }
-
-    bool UpdateRecord( object entity );
-}
-
-public interface IRecordUpdater<in TEntity> : IRecordUpdater
-{
-    bool UpdateRecord(TEntity entity);
-}
-
-public abstract class EntityUpdater<TEntity> : IRecordUpdater<TEntity>
+public abstract class RecordAdjuster<TEntity> : IRecordAdjuster<TEntity>
     where TEntity : class
 {
-    protected EntityUpdater(
+    protected RecordAdjuster(
         IUpdateRecorder2 updateRecorder,
         Dictionary<int, TEntity> adjustments,
         ILoggerFactory? loggerFactory
@@ -39,7 +27,7 @@ public abstract class EntityUpdater<TEntity> : IRecordUpdater<TEntity>
 
     protected abstract int GetKeyValue( TEntity entity );
 
-    bool IRecordUpdater.UpdateRecord( object entity )
+    bool IRecordAdjuster.AdjustRecord( object entity )
     {
         if( entity is TEntity castEntity )
             return UpdateRecord( castEntity );

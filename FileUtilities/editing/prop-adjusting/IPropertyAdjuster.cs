@@ -3,7 +3,7 @@
 public interface IPropertyAdjuster
 {
     Type PropertyType { get; }
-
+    
     object? AdjustField( object? propValue );
 }
 

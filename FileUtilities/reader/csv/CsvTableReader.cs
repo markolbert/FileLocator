@@ -7,14 +7,14 @@ namespace J4JSoftware.FileUtilities;
 public class CsvTableReader : ITableReader
 {
     private readonly IRecordFilter<DataRecord>? _filter;
-    private readonly IEntityPropertyAdjuster<DataRecord>? _propAdjuster;
+    private readonly IEntityCorrector<DataRecord>? _propAdjuster;
 
     private FileStream? _fs;
     private StreamReader? _reader;
 
     public CsvTableReader(
         IRecordFilter<DataRecord>? filter = null,
-        IEntityPropertyAdjuster<DataRecord>? propAdjuster = null,
+        IEntityCorrector<DataRecord>? propAdjuster = null,
         ILoggerFactory? loggerFactory = null
     )
     {

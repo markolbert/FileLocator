@@ -10,7 +10,7 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
     where TEntity : class, new()
 {
     private readonly IRecordFilter<TEntity>? _filter;
-    private readonly IEntityPropertyAdjuster<TEntity>? _propAdjuster;
+    private readonly IEntityCorrector<TEntity>? _propAdjuster;
 
     private FileStream? _fs;
     private StreamReader? _reader;
@@ -18,7 +18,7 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
 
     public CsvTableReader(
         IRecordFilter<TEntity>? filter = null,
-        IEntityPropertyAdjuster<TEntity>? propAdjuster = null,
+        IEntityCorrector<TEntity>? propAdjuster = null,
         ILoggerFactory? loggerFactory = null
         )
     {

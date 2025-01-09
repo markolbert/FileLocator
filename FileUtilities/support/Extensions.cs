@@ -45,9 +45,9 @@ public static class Extensions
         catch( Exception ex )
         {
             throw new FileUtilityException( typeof( Extensions ),
-                                        nameof( CreateClassMap ),
-                                        $"Could not create instance of {nameof( ClassMap )}",
-                                        ex );
+                                            nameof( CreateClassMap ),
+                                            $"Could not create instance of {nameof( ClassMap )}",
+                                            ex );
         }
 
         // grab any properties we're supposed to exclude from the map we're building
@@ -72,7 +72,11 @@ public static class Extensions
         return classMap;
     }
 
-    public static bool TryCreateConverter( this CsvFieldAttribute attr, out ITypeConverter? converter, ILoggerFactory? loggerFactory )
+    public static bool TryCreateConverter(
+        this CsvFieldAttribute attr,
+        out ITypeConverter? converter,
+        ILoggerFactory? loggerFactory
+    )
     {
         converter = null;
 
@@ -81,9 +85,9 @@ public static class Extensions
         if( attr.ConverterType == null )
             return false;
 
-        if (!attr.ConverterType.IsAssignableTo(typeof(ITypeConverter)))
+        if( !attr.ConverterType.IsAssignableTo( typeof( ITypeConverter ) ) )
         {
-            logger?.InvalidTypeAssignment(attr.ConverterType, typeof(ITypeConverter));
+            logger?.InvalidTypeAssignment( attr.ConverterType, typeof( ITypeConverter ) );
             return false;
         }
 
@@ -104,14 +108,53 @@ public static class Extensions
             converter = (ITypeConverter) Activator.CreateInstance( attr.ConverterType, ctorParams )!;
             return true;
         }
-        catch (Exception ex)
+        catch( Exception ex )
         {
             logger?.InstanceCreationFailed( attr.ConverterType, ex.Message );
-            
-            throw new FileUtilityException(attr.ConverterType,
-                                        nameof(CsvFieldAttribute),
-                                        $"Could not create instance of {attr.ConverterType}",
-                                        ex);
+
+            throw new FileUtilityException( attr.ConverterType,
+                                            nameof( CsvFieldAttribute ),
+                                            $"Could not create instance of {attr.ConverterType}",
+                                            ex );
         }
+    }
+
+    internal static (ConstructorInfo? ConstructorInfo, bool AllowsLoggingFactory) CheckTypeForValidConstructors(
+        this Type toCheck,
+        params Type[] reqdInterfaces
+    )
+    {
+        if( reqdInterfaces.Length == 0 )
+            reqdInterfaces = [typeof( ILoggerFactory )];
+
+        ConstructorInfo? curInfo = null;
+        var allowsLogging = false;
+
+        foreach( var info in toCheck.GetConstructors()
+                                    .Where( x => x.IsPublic )
+                                    .Select( x => new { ConstructorInfo = x, Parameters = x.GetParameters() } )
+                                    .OrderByDescending( x => x.Parameters.Length ) )
+        {
+            switch( info.Parameters.Length )
+            {
+                case 0:
+                    curInfo = info.ConstructorInfo;
+                    break;
+
+                case 1:
+                    if( info.Parameters[ 0 ].ParameterType == typeof( ILoggerFactory ) )
+                    {
+                        curInfo = info.ConstructorInfo;
+                        allowsLogging = true;
+                    }
+
+                    break;
+
+                default:
+                    continue;
+            }
+        }
+
+        return ( curInfo, allowsLogging );
     }
 }

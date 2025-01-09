@@ -4,8 +4,10 @@ using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
 
-public partial class EntityPropertyAdjuster<TEntity>
+public partial class EntityCorrector<TEntity>
 {
+    private record FilteredAdjuster( IPropertyAdjuster PropertyAdjuster, IEntityFilter? EntityFilter );
+
     private record AdjusterInfo
     {
         private readonly ILogger? _logger;
@@ -27,7 +29,7 @@ public partial class EntityPropertyAdjuster<TEntity>
 
         public string PropertyName { get; }
         public Type PropertyType { get; }
-        public List<IPropertyAdjuster> Adjusters { get; } = [];
+        public List<FilteredAdjuster> Adjusters { get; } = [];
 
         public bool TryGetPropertyValue( object entity, out object? value )
         {
