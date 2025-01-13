@@ -10,7 +10,7 @@ public class MultiRecordJsonFileReader<TRecord>( ILoggerFactory? loggerFactory )
 
     private FileStream? _fs;
 
-    public JsonSerializerOptions SerializerOptions { get; } = new();
+    public JsonSerializerOptions SerializerOptions { get; set; } = new();
 
     public IEnumerable<TRecord>? Contents { get; private set; }
 

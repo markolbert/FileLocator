@@ -1,6 +1,6 @@
 ﻿namespace J4JSoftware.FileUtilities;
 
-public enum EditingFailure
+public enum AdjustmentFailure
 {
     KeyFieldNotFound,
     KeyValueNotFound,
@@ -8,5 +8,5 @@ public enum EditingFailure
     FieldNotFound,
     CouldNotGetInitialValue,
     CouldNotSetNewValue,
-    Other
+    OtherFailure
 }

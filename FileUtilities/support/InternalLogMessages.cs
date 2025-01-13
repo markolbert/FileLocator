@@ -319,6 +319,15 @@ internal static partial class InternalLogMessages
         [ CallerMemberName ] string caller = ""
     );
 
+    [LoggerMessage(LogLevel.Error, "{caller}: Could not get value for property {propName} on entity {entityType}, message was '{mesg}' ")]
+    internal static partial void CouldNotGetValue(
+        this ILogger logger,
+        Type entityType,
+        string propName,
+        string mesg,
+        [CallerMemberName] string caller = ""
+    );
+
     [LoggerMessage(LogLevel.Error, "{caller}: Could not set value '{value}' to property {propName} ({propType}) on entity {entityType}, message was '{mesg}' ")]
     internal static partial void CouldNotSetValue(
         this ILogger logger,
@@ -343,5 +352,76 @@ internal static partial class InternalLogMessages
         Type incorrect,
         Type correct,
         [CallerMemberName] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Critical, "{caller}: Could not create an instance of {interfaceType} on type {type}")]
+    internal static partial void MissingInterface(
+        this ILogger logger,
+        Type type,
+        Type interfaceType,
+        [ CallerMemberName ] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Critical, "{caller}: Failed to read {entityType} replacements from {path}, message was '{mesg}'")]
+    internal static partial void FailedToReadReplacements(
+        this ILogger logger,
+        Type entityType,
+        string path,
+        string mesg,
+        [ CallerMemberName ] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Warning, "{caller}: No replacements processed for {type}")]
+    internal static partial void NoReplacementsChecked(
+        this ILogger logger,
+        Type type,
+        [ CallerMemberName ] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Warning, "{caller}: No replacements processed for {type}")]
+    internal static partial void NoReplacementsMade(
+        this ILogger logger,
+        Type type,
+        [CallerMemberName] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Warning, "{caller}: {type} replacement properties not checked: {props}")]
+    internal static partial void ReplacementPropertiesNotChecked(
+        this ILogger logger,
+        Type type,
+        string props,
+        [CallerMemberName] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Warning, "{caller}: {type} replacement properties not processed: {props}")]
+    internal static partial void ReplacementPropertiesNotProcessed(
+        this ILogger logger,
+        Type type,
+        string props,
+        [CallerMemberName] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Error, "{caller}: Could not get getter for {propName} on {type}")]
+    internal static partial void UndefinedGetter(
+        this ILogger logger,
+        Type type,
+        string propName,
+        [ CallerMemberName ] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Error, "{caller}: Could not get setter for {propName} on {type}")]
+    internal static partial void UndefinedSetter(
+        this ILogger logger,
+        Type type,
+        string propName,
+        [CallerMemberName] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Critical, "{caller}: Key field {key} not found int ExpandoObject for {type}")]
+    internal static partial void ExpandoKeyFieldNotFound(
+        this ILogger logger,
+        Type type,
+        string key,
+        [ CallerMemberName ] string caller = ""
     );
 }

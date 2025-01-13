@@ -4,6 +4,8 @@ public interface ITableReader : IDisposable
 {
     Type ImportedType { get; }
 
+    HashSet<int> GetReplacementIds();
+
     bool TryGetData( ImportContext context, out IEnumerable<object>? data );
 }
 

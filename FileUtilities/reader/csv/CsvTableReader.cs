@@ -7,19 +7,19 @@ namespace J4JSoftware.FileUtilities;
 public class CsvTableReader : ITableReader
 {
     private readonly IRecordFilter<DataRecord>? _filter;
-    private readonly IEntityCorrector<DataRecord>? _propAdjuster;
+    private readonly IEntityAdjuster<DataRecord>? _entityAdjuster;
 
     private FileStream? _fs;
     private StreamReader? _reader;
 
     public CsvTableReader(
         IRecordFilter<DataRecord>? filter = null,
-        IEntityCorrector<DataRecord>? propAdjuster = null,
+        IEntityAdjuster<DataRecord>? entityAdjuster = null,
         ILoggerFactory? loggerFactory = null
     )
     {
         _filter = filter;
-        _propAdjuster = propAdjuster;
+        _entityAdjuster = entityAdjuster;
 
         LoggerFactory = loggerFactory;
         Logger = loggerFactory?.CreateLogger(GetType());
@@ -33,6 +33,8 @@ public class CsvTableReader : ITableReader
 
     public Type ImportedType => typeof( DataRecord );
 
+    public HashSet<int> GetReplacementIds() => _entityAdjuster?.GetReplacementIds() ?? [];
+
     public IEnumerable<DataRecord> GetData( ImportContext context )
     {
         if (!File.Exists(context.ImportPath))
@@ -45,9 +47,12 @@ public class CsvTableReader : ITableReader
         if( !_filter?.Initialize() ?? false )
             yield break;
 
+        if (!_entityAdjuster?.Initialize(context) ?? false)
+            yield break;
+
         // finally, complete whatever custom reader initialization
         // may be defined
-        if( !Initialize() )
+        if ( !Initialize() )
             yield break;
 
         CurrentRecord = 0;
@@ -93,7 +98,7 @@ public class CsvTableReader : ITableReader
 
             var curRecord = CreateDataRecord(context.ImportPath, headers);
 
-            if( !_propAdjuster?.AdjustEntity( curRecord ) ?? false )
+            if( !_entityAdjuster?.AdjustEntity( curRecord ) ?? false )
                 yield break;
 
             if (_filter != null && !_filter.Include(curRecord))
@@ -106,31 +111,6 @@ public class CsvTableReader : ITableReader
     }
 
     protected virtual bool Initialize() => true;
-
-    //private bool InitializeInternal( ImportContext context )
-    //{
-    //    if (_cleaner == null)
-    //        return Initialize();
-
-    //    if (_cleaner.FieldReplacements == null)
-    //        return _cleaner.Initialize() && Initialize();
-
-    //    if (string.IsNullOrWhiteSpace(context.TweaksPath))
-    //    {
-    //        Logger?.UndefinedPath(nameof(CsvTableReader));
-    //        return false;
-    //    }
-
-    //    if (!File.Exists(context.TweaksPath))
-    //    {
-    //        Logger?.FileNotFound(context.TweaksPath);
-    //        return false;
-    //    }
-
-    //    _cleaner.FieldReplacements.Load(context.TweaksPath!);
-
-    //    return _cleaner.Initialize() && Initialize();
-    //}
 
     // CsvReader will always be non-null when this is called
     protected virtual DataRecord CreateDataRecord(string importPath, List<string> headers )
@@ -159,7 +139,7 @@ public class CsvTableReader : ITableReader
         }
 
         // save whatever changes/updates were recorded
-        _propAdjuster?.SaveAdjustmentInfo();
+        _entityAdjuster?.SaveAdjustmentRecords();
     }
 
     public void Dispose()

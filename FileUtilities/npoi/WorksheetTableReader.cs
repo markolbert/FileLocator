@@ -12,11 +12,11 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
 {
     private readonly Dictionary<int, IImportedColumn> _columns = [];
     private readonly IRecordFilter<TEntity>? _filter;
-    private readonly IEntityCorrector<TEntity>? _propAdjuster;
+    private readonly IEntityAdjuster? _entityAdjuster;
 
     public WorksheetTableReader(
         IRecordFilter<TEntity>? filter = null,
-        IEntityCorrector<TEntity>? propAdjuster = null,
+        IEntityAdjuster<TEntity>? entityAdjuster = null,
         ILoggerFactory? loggerFactory = null
     )
     {
@@ -24,13 +24,15 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
         Logger = LoggerFactory?.CreateLogger( GetType() );
 
         _filter = filter;
-        _propAdjuster = propAdjuster;
+        _entityAdjuster = entityAdjuster;
     }
 
     protected ILoggerFactory? LoggerFactory { get; }
     protected ILogger? Logger { get; }
 
     public Type ImportedType => typeof( TEntity );
+
+    public HashSet<int> GetReplacementIds() => _entityAdjuster?.GetReplacementIds() ?? [];
 
     public IEnumerable<TEntity> GetData( TContext context )
     {
@@ -54,7 +56,7 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
                 Logger?.FailedToSetCellValue( kvp.Key, rowNum );
             }
 
-            if( !_propAdjuster?.AdjustEntity( entity ) ?? false )
+            if( !_entityAdjuster?.AdjustEntity( entity ) ?? false )
                 yield break;
 
             if( _filter == null || _filter.Include( entity ) )
@@ -213,7 +215,7 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
     protected virtual void CompleteImport()
     {
         // save whatever changes/updates were recorded
-        _propAdjuster?.SaveAdjustmentInfo();
+        _entityAdjuster?.SaveAdjustmentRecords();
     }
 
     public void Dispose()
