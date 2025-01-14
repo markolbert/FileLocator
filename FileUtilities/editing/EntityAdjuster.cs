@@ -12,6 +12,7 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
     private readonly IUpdateRecorder? _updateRecorder;
     private readonly Dictionary<int, HashSet<string>> _propsChanged = [];
     private readonly Func<TEntity, int> _keyGetter;
+    private readonly Correctors<TEntity> _correctors = [];
     private readonly string _keyName;
     private readonly Dictionary<string, Func<TEntity, object?>> _getters = [];
     private readonly Dictionary<string, Action<TEntity, object?>> _setters = [];
@@ -63,47 +64,48 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
 
     public virtual bool AdjustEntity( TEntity entity )
     {
-        if( !CorrectProperties( entity ) )
-            return false;
+        // do replacements first so we can skip correcting any
+        // replaced properties
+        HashSet<string> propsReplaced;
 
-        return !_replacementsDefined || ApplyReplacements( entity );
+        if( _replacementsDefined )
+        {
+            if( !ApplyReplacements( entity, out propsReplaced ) )
+                return false;
+        }
+        else propsReplaced = [];
+
+        CorrectProperties( entity, propsReplaced );
+
+        return true;
     }
 
-    protected virtual void AdjustField<TProp>(
-        TEntity entity,
-        Expression<Func<TEntity, TProp>> propExpr,
-        List<IPropertyAdjuster<TProp>> adjusters
+    protected void AddSinglePropertyCorrector<TProp>(
+        Expression<Func<TEntity, TProp?>> propExpr,
+        params IPropertyAdjuster<TProp?>[] adjusters
     )
     {
-        var getter = propExpr.Compile();
+        if( adjusters.Length == 0 )
+            return;
 
         var propInfo = propExpr.GetPropertyInfo();
 
-        var adjustments = 0;
-        var initialValue = getter(entity);
-
-        foreach (var adjuster in adjusters)
+        if( !_correctors.TryGetValue( propInfo.Name, out var corrector ) )
         {
-            if (!adjuster.AdjustField(getter(entity), out var adjValue))
-                continue;
-
-            Setter(entity, adjValue);
-
-            adjustments++;
+            corrector = new Corrector<TEntity, TProp>( _keyGetter, propExpr, _updateRecorder );
+            _correctors.Add( corrector );
         }
 
-        if( adjustments > 0 )
-            RecordSuccessfulAdjustment( _keyGetter( entity ),
-                                        propInfo.Name,
-                                        initialValue?.ToString(),
-                                        getter( entity )?.ToString() );
-
-        return;
-
-        void Setter(TEntity c, TProp value) => propInfo.SetValue(c, value);
+        ( (Corrector<TEntity, TProp>) corrector ).Adjusters.AddRange( adjusters );
     }
 
-    protected virtual bool CorrectProperties( TEntity entity ) => true;
+    protected virtual void CorrectProperties( TEntity entity, HashSet<string> propsReplaced )
+    {
+        foreach( var corrector in _correctors.Where( c => !propsReplaced.Contains( c.PropertyName ) ) )
+        {
+            corrector.CorrectEntity( entity );
+        }
+    }
 
     #region replacements 
 
@@ -170,7 +172,7 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
             if (_propsChanged.ContainsKey(key))
                 continue;
 
-            // don't add the key field to the props changed set, becuase
+            // don't add the key field to the props changed set, because
             // we never want to change it
             _propsChanged.Add(key,
                                ((IDictionary<string, object?>)expando).Keys
@@ -198,8 +200,10 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
 
     protected abstract int GetExpandoKey(dynamic expando);
 
-    protected bool ApplyReplacements( TEntity dbEntity )
+    protected bool ApplyReplacements( TEntity dbEntity, out HashSet<string> propsReplaced )
     {
+        propsReplaced = [];
+
         var id = _keyGetter( dbEntity );
 
         if( !_replEntities!.TryGetValue( id, out var replEntity ) )
@@ -234,9 +238,15 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
                 continue;
             }
 
-            RecordSuccessfulAdjustment( id, propName, existingValue?.ToString(), replValue?.ToString() );
+            RecordSuccessfulAdjustment( id,
+                                        propName,
+                                        ChangeSource.Replacement,
+                                        existingValue?.ToString(),
+                                        replValue?.ToString() );
 
             setter( dbEntity, replValue );
+
+            propsReplaced.Add( propName );
         }
 
         return allOkay;
@@ -247,11 +257,12 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
     public void RecordSuccessfulAdjustment(
         int key,
         string field,
+        ChangeSource source,
         string? originalValue,
         string? adjValue,
         string? reason = null
     ) =>
-        _updateRecorder?.FieldRevised( EntityType, key, field, originalValue, adjValue, reason );
+        _updateRecorder?.PropertyValueChanged( EntityType, key, field, source, originalValue, adjValue, reason );
 
     public virtual void SaveAdjustmentRecords()
     {
