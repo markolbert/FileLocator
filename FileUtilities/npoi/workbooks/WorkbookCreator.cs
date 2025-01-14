@@ -108,19 +108,6 @@ public class WorkbookCreator(
             }
         }
 
-        //using var writeStream =
-        //    new FileStream(filePath, createFile ? FileMode.Create : FileMode.Open, FileAccess.Write);
-
-        //workbook.Write(writeStream);
-
-        //using( var writeStream =
-        //      new FileStream( filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None ) )
-        //{
-        //    writeStream.SetLength( 0 );
-        //    workbook.Write( writeStream );
-        //    workbook.Close();
-        //}
-
         // write file from MemoryStream per suggestion from support team
         // to avoid file corruption when updating existing sheets
         using var writeStream = new MemoryStream();

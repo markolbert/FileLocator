@@ -9,5 +9,5 @@ public interface IPropertyAdjuster
 
 public interface IPropertyAdjuster<TProp> : IPropertyAdjuster
 {
-    bool AdjustField( TProp propValue, out TProp adjValue );
+    bool AdjustField( TProp? propValue, out TProp adjValue );
 }

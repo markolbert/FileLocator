@@ -23,7 +23,7 @@ public abstract class PropertyAdjuster<TProp> : IPropertyAdjuster<TProp>
 
     public Type PropertyType => typeof( TProp );
 
-    public virtual bool AdjustField( TProp propValue, out TProp adjValue )
+    public virtual bool AdjustField( TProp? propValue, out TProp adjValue )
     {
         var initialValue = propValue;
         adjValue = AdjustFieldInternal( propValue );
@@ -31,7 +31,7 @@ public abstract class PropertyAdjuster<TProp> : IPropertyAdjuster<TProp>
         return !(_equalityComparer?.Equals( initialValue, adjValue ) ?? initialValue?.Equals( adjValue ) ?? false);
     }
 
-    protected abstract TProp AdjustFieldInternal( TProp propValue );
+    protected abstract TProp AdjustFieldInternal( TProp? propValue );
 
     bool IPropertyAdjuster.AdjustField(object? propValue, out object? adjValue )
     {

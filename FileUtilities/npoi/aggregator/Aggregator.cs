@@ -60,7 +60,6 @@ public class Aggregator<TEntity, TProp>(
 
             cell.CellStyle = Creator.StyleSets.ResolveCellStyle(tableExporter.Sheet!.Workbook, aggStyle);
             cell.SetCellFormula($"{aggFuncName}({range})");
-            //cell.SetCellValue(-5.0);
 
             sheetCol++;
         }
