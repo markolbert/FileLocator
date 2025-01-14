@@ -4,21 +4,14 @@ namespace J4JSoftware.FileUtilities;
 
 public interface IUpdateRecorder
 {
-    bool RecordSkipped( Type entityType, int keyValue, string? reason = null );
-    bool RecordMerged( Type entityType, int originalKeyValue, int mergedIntoKeyValue, string? reason = null );
+    bool EntitySkipped( Type entityType, int keyValue, string? reason = null );
+    bool EntityMerged( Type entityType, int originalKeyValue, int mergedIntoKeyValue, string? reason = null );
 
-    bool FieldNullified(
+    bool PropertyValueChanged(
         Type entityType,
-        int recordKey,
-        string fieldName,
-        string? originalValue,
-        string? reason = null
-    );
-
-    bool FieldRevised(
-        Type entityType,
-        int recordKey,
-        string fieldName,
+        int entityKey,
+        string propName,
+        ChangeSource source,
         string? originalValue,
         string? revisedValue,
         string? reason = null

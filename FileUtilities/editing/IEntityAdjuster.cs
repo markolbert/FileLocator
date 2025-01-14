@@ -9,7 +9,16 @@ public interface IEntityAdjuster
     HashSet<int> GetReplacementIds();
 
     bool AdjustEntity( object entity );
-    void RecordSuccessfulAdjustment( int key, string field, string? priorValue, string? adjValue, string? reason = null );
+
+    void RecordSuccessfulAdjustment(
+        int key,
+        string field,
+        ChangeSource source,
+        string? priorValue,
+        string? adjValue,
+        string? reason = null
+    );
+
     void SaveAdjustmentRecords();
 }
 
