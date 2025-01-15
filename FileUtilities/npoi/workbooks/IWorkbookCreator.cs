@@ -11,5 +11,5 @@ public interface IWorkbookCreator
 
     ISheetCreator AddSheet( ISheetCreator export );
 
-    bool Export( string filePath, bool forceRecreation = false );
+    bool Export( string filePath, bool forceRecreation = true );
 }

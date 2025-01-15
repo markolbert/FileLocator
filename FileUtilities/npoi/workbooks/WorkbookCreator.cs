@@ -48,7 +48,7 @@ public class WorkbookCreator(
         return sheet; 
     }
 
-    public bool Export( string filePath, bool forceRecreation = false )
+    public bool Export( string filePath, bool forceRecreation = true )
     {
         _workbook = null;
         var createFile = true;
