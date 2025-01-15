@@ -4,13 +4,14 @@ public interface IEntityAdjuster
 {
     Type EntityType { get; }
     bool IsValid { get; }
+    IUpdateRecorder? UpdateRecorder { get; set; }
 
     bool Initialize( ImportContext context );
     HashSet<int> GetReplacementIds();
 
     bool AdjustEntity( object entity );
 
-    void RecordSuccessfulAdjustment(
+    void RecordAdjustment(
         int key,
         string field,
         ChangeSource source,

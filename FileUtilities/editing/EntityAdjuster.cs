@@ -9,7 +9,6 @@ namespace J4JSoftware.FileUtilities;
 public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
     where TEntity : class
 {
-    private readonly IUpdateRecorder? _updateRecorder;
     private readonly Dictionary<int, HashSet<string>> _propsChanged = [];
     private readonly Func<TEntity, int> _keyGetter;
     private readonly Correctors<TEntity> _correctors = [];
@@ -21,7 +20,6 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
     private bool _replacementsDefined;
 
     protected EntityAdjuster(
-        IUpdateRecorder? updateRecorder,
         Expression<Func<TEntity, int>> keyExpr,
         string nullText,
         ILoggerFactory? loggerFactory
@@ -33,7 +31,6 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
         _keyGetter = keyExpr.Compile();
         _keyName = keyExpr.GetPropertyInfo().Name;
 
-        _updateRecorder = updateRecorder;
         NullText = nullText;
     }
 
@@ -45,6 +42,7 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
 
     public Type EntityType => typeof( TEntity );
     public bool IsValid { get; protected set; }
+    public IUpdateRecorder? UpdateRecorder { get; set; }
 
     public virtual bool Initialize( ImportContext context )
     {
@@ -92,7 +90,7 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
 
         if( !_correctors.TryGetValue( propInfo.Name, out var corrector ) )
         {
-            corrector = new Corrector<TEntity, TProp>( _keyGetter, propExpr, _updateRecorder );
+            corrector = new Corrector<TEntity, TProp>( _keyGetter, propExpr, UpdateRecorder );
             _correctors.Add( corrector );
         }
 
@@ -238,7 +236,7 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
                 continue;
             }
 
-            RecordSuccessfulAdjustment( id,
+            RecordAdjustment( id,
                                         propName,
                                         ChangeSource.Replacement,
                                         existingValue?.ToString(),
@@ -254,19 +252,21 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
 
     #endregion
 
-    public void RecordSuccessfulAdjustment(
+    public void RecordAdjustment(
         int key,
         string field,
         ChangeSource source,
         string? originalValue,
         string? adjValue,
         string? reason = null
-    ) =>
-        _updateRecorder?.PropertyValueChanged( EntityType, key, field, source, originalValue, adjValue, reason );
+    )
+    {
+        UpdateRecorder?.PropertyValueChanged( EntityType, key, field, source, originalValue, adjValue, reason );
+    }
 
     public virtual void SaveAdjustmentRecords()
     {
-        _updateRecorder?.SaveChanges();
+        UpdateRecorder?.SaveChanges();
     }
 
     bool IEntityAdjuster.AdjustEntity( object entity )

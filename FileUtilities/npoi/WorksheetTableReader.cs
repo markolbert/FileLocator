@@ -11,28 +11,23 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
     where TContext : WorksheetImportContext
 {
     private readonly Dictionary<int, IImportedColumn> _columns = [];
-    private readonly IRecordFilter<TEntity>? _filter;
-    private readonly IEntityAdjuster? _entityAdjuster;
 
     public WorksheetTableReader(
-        IRecordFilter<TEntity>? filter = null,
-        IEntityAdjuster<TEntity>? entityAdjuster = null,
         ILoggerFactory? loggerFactory = null
     )
     {
         LoggerFactory = loggerFactory;
         Logger = LoggerFactory?.CreateLogger( GetType() );
-
-        _filter = filter;
-        _entityAdjuster = entityAdjuster;
     }
 
     protected ILoggerFactory? LoggerFactory { get; }
     protected ILogger? Logger { get; }
 
     public Type ImportedType => typeof( TEntity );
+    public IRecordFilter<TEntity>? Filter { get; set; }
+    public IEntityAdjuster<TEntity>? EntityAdjuster { get; set; }
 
-    public HashSet<int> GetReplacementIds() => _entityAdjuster?.GetReplacementIds() ?? [];
+    public HashSet<int> GetReplacementIds() => EntityAdjuster?.GetReplacementIds() ?? [];
 
     public IEnumerable<TEntity> GetData( TContext context )
     {
@@ -56,10 +51,10 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
                 Logger?.FailedToSetCellValue( kvp.Key, rowNum );
             }
 
-            if( !_entityAdjuster?.AdjustEntity( entity ) ?? false )
+            if( !EntityAdjuster?.AdjustEntity( entity ) ?? false )
                 yield break;
 
-            if( _filter == null || _filter.Include( entity ) )
+            if( Filter == null || Filter.Include( entity ) )
                 yield return entity;
         }
 
@@ -215,7 +210,7 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
     protected virtual void CompleteImport()
     {
         // save whatever changes/updates were recorded
-        _entityAdjuster?.SaveAdjustmentRecords();
+        EntityAdjuster?.SaveAdjustmentRecords();
     }
 
     public void Dispose()
@@ -237,5 +232,41 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
         Logger?.InvalidTypeAssignment( context.GetType(), typeof( TContext ) );
 
         return false;
+    }
+
+    bool ITableReader.SetAdjuster( IEntityAdjuster? adjuster )
+    {
+        if (adjuster == null)
+        {
+            EntityAdjuster = null;
+            return true;
+        }
+
+        if ( adjuster is not IEntityAdjuster<TEntity> castAdjuster )
+        {
+            Logger?.InvalidTypeAssignment( adjuster?.GetType() ?? typeof(object), typeof( IEntityAdjuster<TEntity> ) );
+            return false;
+        }
+
+        EntityAdjuster = castAdjuster;
+        return true;
+    }
+
+    bool ITableReader.SetFilter(IRecordFilter? filter)
+    {
+        if (filter == null)
+        {
+            Filter = null;
+            return true;
+        }
+
+        if (filter is not IRecordFilter<TEntity> castFilter)
+        {
+            Logger?.InvalidTypeAssignment(filter?.GetType() ?? typeof(object), typeof(IRecordFilter<TEntity>));
+            return false;
+        }
+
+        Filter = castFilter;
+        return true;
     }
 }

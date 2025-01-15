@@ -9,22 +9,14 @@ namespace J4JSoftware.FileUtilities;
 public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
     where TEntity : class, new()
 {
-    private readonly IRecordFilter<TEntity>? _filter;
-    private readonly IEntityAdjuster<TEntity>? _entityAdjuster;
-
     private FileStream? _fs;
     private StreamReader? _reader;
     private CsvReader? _csvReader;
 
     public CsvTableReader(
-        IRecordFilter<TEntity>? filter = null,
-        IEntityAdjuster<TEntity>? entityAdjuster = null,
         ILoggerFactory? loggerFactory = null
         )
     {
-        _filter = filter;
-        _entityAdjuster = entityAdjuster;
-
         LoggerFactory = loggerFactory;
         Logger = loggerFactory?.CreateLogger( GetType() );
     }
@@ -34,7 +26,10 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
 
     public Type ImportedType => typeof( TEntity );
 
-    public HashSet<int> GetReplacementIds() => _entityAdjuster?.GetReplacementIds() ?? [];
+    public IRecordFilter<TEntity>? Filter { get; set; }
+    public IEntityAdjuster<TEntity>? EntityAdjuster { get; set; }
+
+    public HashSet<int> GetReplacementIds() => EntityAdjuster?.GetReplacementIds() ?? [];
 
     public IEnumerable<TEntity> GetData(ImportContext context)
     {
@@ -45,14 +40,14 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
         }
 
         // initialize the filter, if one exists
-        if (!_filter?.Initialize() ?? false)
+        if (!Filter?.Initialize() ?? false)
             yield break;
 
         var classMap = GetClassMap();
         if( classMap == null )
             yield break;
 
-        if( !_entityAdjuster?.Initialize( context ) ?? false )
+        if( !EntityAdjuster?.Initialize( context ) ?? false )
             yield break;
 
         // finally, complete whatever custom reader initialization
@@ -91,9 +86,9 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
         }
 
         foreach( var record in _csvReader.GetRecords<TEntity>()
-                                         .Where( x => ( _filter == null || _filter.Include( x ) ) ) )
+                                         .Where( x => ( Filter == null || Filter.Include( x ) ) ) )
         {
-            if( !_entityAdjuster?.AdjustEntity( record ) ?? false )
+            if( !EntityAdjuster?.AdjustEntity( record ) ?? false )
                 yield break;
 
             yield return record;
@@ -153,7 +148,7 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
         }
 
         // save whatever changes/updates were recorded
-        _entityAdjuster?.SaveAdjustmentRecords();
+        EntityAdjuster?.SaveAdjustmentRecords();
     }
 
     public void Dispose()
@@ -169,6 +164,42 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
     )
     {
         data = GetData(context);
+        return true;
+    }
+
+    bool ITableReader.SetAdjuster(IEntityAdjuster? adjuster)
+    {
+        if( adjuster == null )
+        {
+            EntityAdjuster = null;
+            return true;
+        }
+
+        if (adjuster is not IEntityAdjuster<TEntity> castAdjuster)
+        {
+            Logger?.InvalidTypeAssignment(adjuster?.GetType() ?? typeof(object), typeof(IEntityAdjuster<TEntity>));
+            return false;
+        }
+        
+        EntityAdjuster = castAdjuster;
+        return true;
+    }
+
+    bool ITableReader.SetFilter(IRecordFilter? filter)
+    {
+        if( filter == null )
+        {
+            Filter = null;
+            return true;
+        }
+
+        if (filter is not IRecordFilter<TEntity> castFilter)
+        {
+            Logger?.InvalidTypeAssignment(filter?.GetType() ?? typeof(object), typeof(IRecordFilter<TEntity>));
+            return false;
+        }
+
+        Filter = castFilter;
         return true;
     }
 }

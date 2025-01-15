@@ -421,4 +421,11 @@ internal static partial class InternalLogMessages
         string key,
         [ CallerMemberName ] string caller = ""
     );
+
+    [LoggerMessage(LogLevel.Warning, "{caller}: {type} adjustments are not being recorded")]
+    internal static partial void AdjustmentsNotRecorded(
+        this ILogger logger,
+        Type type,
+        [ CallerMemberName ] string caller = ""
+    );
 }
