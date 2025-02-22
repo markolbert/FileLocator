@@ -1,17 +1,19 @@
 ﻿using System.Linq.Expressions;
+using System.Reflection;
 using J4JSoftware.Utilities;
 
 namespace J4JSoftware.FileUtilities;
 
 internal record Corrector<TEntity, TProp> : ICorrector<TEntity>
+    where TEntity: class
 {
-    private readonly Func<TEntity, int> _keyGetter;
+    //private readonly Func<TEntity, int> _keyGetter;
     private readonly Func<TEntity, TProp?> _propGetter;
     private readonly Action<TEntity, TProp?> _propSetter;
     private readonly IUpdateRecorder? _updateRecorder;
 
     public Corrector(
-        Func<TEntity, int> keyGetter,
+        //Func<TEntity, int> keyGetter,
         Expression<Func<TEntity, TProp?>> propGetter,
         IUpdateRecorder? updateRecorder
     )
@@ -20,8 +22,22 @@ internal record Corrector<TEntity, TProp> : ICorrector<TEntity>
 
         PropertyName = propInfo.Name;
 
-        _keyGetter = keyGetter;
+        //_keyGetter = keyGetter;
         _propGetter = propGetter.Compile();
+        _propSetter = ( e, p ) => propInfo.SetValue( e, p );
+        _updateRecorder = updateRecorder;
+    }
+
+    public Corrector(
+        //Func<TEntity, int> keyGetter,
+        PropertyInfo propInfo,
+        IUpdateRecorder? updateRecorder
+    )
+    {
+        PropertyName = propInfo.Name;
+
+        //_keyGetter = keyGetter;
+        _propGetter = e => (TProp?) propInfo.GetValue( e );
         _propSetter = ( e, p ) => propInfo.SetValue( e, p );
         _updateRecorder = updateRecorder;
     }
@@ -48,8 +64,7 @@ internal record Corrector<TEntity, TProp> : ICorrector<TEntity>
         if( !adjusted )
             return;
 
-        _updateRecorder?.PropertyValueChanged( typeof( TEntity ),
-                                               _keyGetter( entity ),
+        _updateRecorder?.PropertyValueChanged( entity,
                                                PropertyName,
                                                ChangeSource.Rule,
                                                _propGetter( entity )?.ToString(),

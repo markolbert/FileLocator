@@ -1,6 +1,7 @@
 ﻿using System.Dynamic;
 using System.Linq.Expressions;
-using System.Text.Json;
+using System.Reflection;
+using System.Text.Json.Serialization;
 using J4JSoftware.Utilities;
 using Microsoft.Extensions.Logging;
 
@@ -15,6 +16,8 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
     private readonly string _keyName;
     private readonly Dictionary<string, Func<TEntity, object?>> _getters = [];
     private readonly Dictionary<string, Action<TEntity, object?>> _setters = [];
+    private readonly List<PropertyInfo> _entityProps;
+    private readonly HashSet<JsonConverter> _jsonConverters = [];
 
     private Dictionary<int, TEntity>? _replEntities;
     private bool _replacementsDefined;
@@ -30,6 +33,7 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
 
         _keyGetter = keyExpr.Compile();
         _keyName = keyExpr.GetPropertyInfo().Name;
+        _entityProps = EntityType.GetProperties().ToList();
 
         NullText = nullText;
     }
@@ -38,7 +42,6 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
     protected ILogger? Logger { get; }
 
     protected string NullText { get; }
-    protected JsonSerializerOptions? JsonReplacementSerializerOptions { get; set; }
 
     public Type EntityType => typeof( TEntity );
     public bool IsValid { get; protected set; }
@@ -78,6 +81,14 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
         return true;
     }
 
+    protected void AddJsonConverter( params JsonConverter[] converters )
+    {
+        foreach( var converter in converters )
+        {
+            _jsonConverters.Add( converter );
+        }
+    }
+
     protected void AddSinglePropertyCorrector<TProp>(
         Expression<Func<TEntity, TProp?>> propExpr,
         params IPropertyAdjuster<TProp?>[] adjusters
@@ -90,7 +101,7 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
 
         if( !_correctors.TryGetValue( propInfo.Name, out var corrector ) )
         {
-            corrector = new Corrector<TEntity, TProp>( _keyGetter, propExpr, UpdateRecorder );
+            corrector = new Corrector<TEntity, TProp>( propExpr, UpdateRecorder );
             _correctors.Add( corrector );
         }
 
@@ -99,7 +110,7 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
 
     protected virtual void CorrectProperties( TEntity entity, HashSet<string> propsReplaced )
     {
-        foreach( var corrector in _correctors.Where( c => !propsReplaced.Contains( c.PropertyName ) ) )
+        foreach ( var corrector in _correctors.Where( c => !propsReplaced.Contains( c.PropertyName ) ) )
         {
             corrector.CorrectEntity( entity );
         }
@@ -130,8 +141,7 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
             // we never want to change the key field
             masterPropsChanged.Remove(_keyName);
 
-            foreach (var propInfo in typeof(TEntity).GetProperties()
-                                                    .Where(x => masterPropsChanged.Contains(x.Name)))
+            foreach (var propInfo in _entityProps.Where(x => masterPropsChanged.Contains(x.Name)))
             {
                 _getters.Add(propInfo.Name, (e) => propInfo.GetValue(e));
                 _setters.Add(propInfo.Name, (e, value) => propInfo.SetValue(e, value));
@@ -185,8 +195,10 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
     {
         var reader = new MultiRecordJsonFileReader<TEntity>(LoggerFactory);
 
-        if (JsonReplacementSerializerOptions != null)
-            reader.SerializerOptions = JsonReplacementSerializerOptions;
+        foreach( var converter in _jsonConverters )
+        {
+            reader.SerializerOptions.Converters.Add( converter );
+        }
 
         if (!reader.LoadFile(filePath))
             return false;
@@ -236,11 +248,11 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
                 continue;
             }
 
-            RecordAdjustment( id,
-                                        propName,
-                                        ChangeSource.Replacement,
-                                        existingValue?.ToString(),
-                                        replValue?.ToString() );
+            RecordAdjustment( dbEntity,
+                              propName,
+                              ChangeSource.Replacement,
+                              existingValue?.ToString(),
+                              replValue?.ToString() );
 
             setter( dbEntity, replValue );
 
@@ -253,7 +265,7 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
     #endregion
 
     public void RecordAdjustment(
-        int key,
+        TEntity entity,
         string field,
         ChangeSource source,
         string? originalValue,
@@ -261,7 +273,7 @@ public abstract class EntityAdjuster<TEntity> : IEntityAdjuster<TEntity>
         string? reason = null
     )
     {
-        UpdateRecorder?.PropertyValueChanged( EntityType, key, field, source, originalValue, adjValue, reason );
+        UpdateRecorder?.PropertyValueChanged( entity, field, source, originalValue, adjValue, reason );
     }
 
     public virtual void SaveAdjustmentRecords()

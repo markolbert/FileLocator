@@ -428,4 +428,13 @@ internal static partial class InternalLogMessages
         Type type,
         [ CallerMemberName ] string caller = ""
     );
+
+    [LoggerMessage(LogLevel.Critical, "{caller}: Failed to create null corrector for {prop} on {type}, message was {mesg}")]
+    internal static partial void FailedToCreateNullCorrector(
+        this ILogger logger,
+        Type type,
+        string prop,
+        string mesg,
+        [ CallerMemberName ] string caller = ""
+    );
 }

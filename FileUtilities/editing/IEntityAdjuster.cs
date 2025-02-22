@@ -11,8 +11,14 @@ public interface IEntityAdjuster
 
     bool AdjustEntity( object entity );
 
+    void SaveAdjustmentRecords();
+}
+
+public interface IEntityAdjuster<in TEntity> : IEntityAdjuster
+{
+    bool AdjustEntity(TEntity entity);
     void RecordAdjustment(
-        int key,
+        TEntity entity,
         string field,
         ChangeSource source,
         string? priorValue,
@@ -20,10 +26,4 @@ public interface IEntityAdjuster
         string? reason = null
     );
 
-    void SaveAdjustmentRecords();
-}
-
-public interface IEntityAdjuster<in TEntity> : IEntityAdjuster
-{
-    bool AdjustEntity(TEntity entity);
 }
