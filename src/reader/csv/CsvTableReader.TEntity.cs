@@ -40,7 +40,16 @@ public class CsvTableReader<TEntity>( ILoggerFactory? loggerFactory = null )
         if( !InitializeClassMap() )
             return false;
 
-        CsvReader!.Context.RegisterClassMap( _classMap! );
+        try
+        {
+            CsvReader!.Context.RegisterClassMap( _classMap! );
+        }
+        catch( Exception ex )
+        {
+            Logger?.InvalidClassMap( typeof( TEntity ).Name, ex.Message );
+            return false;
+        }
+
         return true;
     }
 

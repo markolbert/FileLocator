@@ -93,6 +93,14 @@ internal static partial class InternalLogMessages
         [ CallerMemberName ] string caller = ""
     );
 
+    [LoggerMessage(LogLevel.Error, "{caller}: could not register ClassMap for {type}, message was '{mesg}'")]
+    internal static partial void InvalidClassMap(
+        this ILogger logger,
+        string type,
+        string mesg,
+        [ CallerMemberName ] string caller = ""
+    );
+
     #region file-related
 
     [ LoggerMessage( LogLevel.Warning,
