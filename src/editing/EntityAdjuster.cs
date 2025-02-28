@@ -2,6 +2,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using J4JSoftware.Utilities;
 using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
