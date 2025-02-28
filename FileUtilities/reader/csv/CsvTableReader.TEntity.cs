@@ -1,91 +1,26 @@
-﻿using System.Globalization;
-using System.Reflection;
-using CsvHelper;
+﻿using System.Reflection;
+using System.Runtime.CompilerServices;
 using CsvHelper.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
 
-public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
+public class CsvTableReader<TEntity>( ILoggerFactory? loggerFactory = null )
+    : CsvTableReaderBase<TEntity>( loggerFactory ), ITableReader<TEntity, ImportContext>
     where TEntity : class, new()
 {
-    private FileStream? _fs;
-    private StreamReader? _reader;
-    private CsvReader? _csvReader;
-
-    public CsvTableReader(
-        ILoggerFactory? loggerFactory = null
-        )
-    {
-        LoggerFactory = loggerFactory;
-        Logger = loggerFactory?.CreateLogger( GetType() );
-    }
-
-    protected ILoggerFactory? LoggerFactory { get; }
-    protected ILogger? Logger { get; }
+    private ClassMap<TEntity>? _classMap;
 
     public Type ImportedType => typeof( TEntity );
-
-    public IRecordFilter<TEntity>? Filter { get; set; }
-    public IEntityAdjuster<TEntity>? EntityAdjuster { get; set; }
 
     public HashSet<int> GetReplacementIds() => EntityAdjuster?.GetReplacementIds() ?? [];
 
     public IEnumerable<TEntity> GetData(ImportContext context)
     {
-        if (!File.Exists(context.ImportPath))
-        {
-            Logger?.FileNotFound(context.ImportPath);
-            yield break;
-        }
-
-        // initialize the filter, if one exists
-        if (!Filter?.Initialize() ?? false)
+        if (!BeginGetData(context))
             yield break;
 
-        var classMap = GetClassMap();
-        if( classMap == null )
-            yield break;
-
-        if( !EntityAdjuster?.Initialize( context ) ?? false )
-            yield break;
-
-        // finally, complete whatever custom reader initialization
-        // may be defined
-        if (!Initialize())
-            yield break;
-
-        foreach ( var fieldToIgnore in context.FieldsToIgnore )
-        {
-            var fieldMap = classMap.MemberMaps.FirstOrDefault(
-                mm => mm.Data.Names.Any( n => n.Equals( fieldToIgnore, StringComparison.OrdinalIgnoreCase ) ) );
-
-            if( fieldMap == null )
-            {
-                Logger?.IgnoreFieldNotFound( typeof( TEntity ), fieldToIgnore );
-                yield break;
-            }
-
-            fieldMap.Ignore( true );
-        }
-
-        try
-        {
-            _fs = File.Open(context.ImportPath, FileMode.Open, FileAccess.Read);
-            _reader = new StreamReader(_fs);
-
-            _csvReader = new CsvReader(_reader, CultureInfo.InvariantCulture);
-            _csvReader.Context.RegisterClassMap(classMap);
-        }
-        catch (Exception ex)
-        {
-            Logger?.FileParsingError(context.ImportPath, ex.Message);
-            Dispose();
-
-            yield break;
-        }
-
-        foreach( var record in _csvReader.GetRecords<TEntity>()
+        foreach( var record in CsvReader!.GetRecords<TEntity>()
                                          .Where( x => ( Filter == null || Filter.Include( x ) ) ) )
         {
             if( !EntityAdjuster?.AdjustEntity( record ) ?? false )
@@ -94,25 +29,51 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
             yield return record;
         }
 
-        CompleteImport();
+        OnReadingEnded();
     }
 
-    protected virtual bool Initialize() => true;
-
-    private ClassMap<TEntity>? GetClassMap()
+    protected override bool BeginGetData( ImportContext context )
     {
-        ClassMap<TEntity>? retVal;
+        if( !base.BeginGetData( context ) )
+            return false;
 
+        if( !InitializeClassMap() )
+            return false;
+
+        CsvReader!.Context.RegisterClassMap( _classMap! );
+        return true;
+    }
+
+    public async IAsyncEnumerable<TEntity> GetDataAsync(ImportContext context, [EnumeratorCancellation] CancellationToken ctx)
+    {
+        if (!BeginGetData(context))
+            yield break;
+
+        await foreach( var record in CsvReader!.GetRecordsAsync<TEntity>( ctx )
+                                               .Where( x => ( Filter == null || Filter.Include( x ) ) )
+                                               .WithCancellation( ctx ) )
+        {
+            if( !EntityAdjuster?.AdjustEntity( record ) ?? false )
+                yield break;
+
+            yield return record;
+        }
+
+        OnReadingEnded();
+    }
+
+    private bool InitializeClassMap()
+    {
         var defaultMapType = typeof(DefaultClassMap<>).MakeGenericType(ImportedType);
 
         try
         {
-            retVal = (Activator.CreateInstance(defaultMapType) as ClassMap<TEntity>)!;
+            _classMap = (Activator.CreateInstance(defaultMapType) as ClassMap<TEntity>)!;
         }
         catch (Exception ex)
         {
             Logger?.InstanceCreationFailed(typeof(ClassMap<TEntity>), ex.Message);
-            return null;
+            return false;
         }
 
         // grab any properties we're supposed to exclude from the map we're building
@@ -128,43 +89,30 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
             if (attr == null)
                 continue;
 
-            var propMap = retVal.Map(ImportedType, propInfo).Name(attr.CsvHeader);
+            var propMap = _classMap.Map(ImportedType, propInfo).Name(attr.CsvHeader);
 
             if (attr.ConverterType != null && attr.TryCreateConverter(out var converter, LoggerFactory) && converter != null)
                 propMap.TypeConverter(converter);
         }
 
-        return retVal;
-    }
-
-    protected virtual void CompleteImport()
-    {
-        // release the file!
-        if( _fs != null )
-        {
-            _fs.Close();
-            _fs.Dispose();
-            _fs = null;
-        }
-
-        // save whatever changes/updates were recorded
-        EntityAdjuster?.SaveAdjustmentRecords();
-    }
-
-    public void Dispose()
-    {
-        _fs?.Dispose();
-        _reader?.Dispose();
-        _csvReader?.Dispose();
+        return true;
     }
 
     bool ITableReader.TryGetData(
         ImportContext context,
-        out IEnumerable<object> data
+        out IEnumerable<object>? data
     )
     {
         data = GetData(context);
         return true;
+    }
+
+    IAsyncEnumerable<object> ITableReader.GetObjectDataAsync(
+        ImportContext context,
+        CancellationToken ctx
+    )
+    {
+        return GetDataAsync( context, ctx );
     }
 
     bool ITableReader.SetAdjuster(IEntityAdjuster? adjuster)
@@ -177,7 +125,7 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
 
         if (adjuster is not IEntityAdjuster<TEntity> castAdjuster)
         {
-            Logger?.InvalidTypeAssignment(adjuster?.GetType() ?? typeof(object), typeof(IEntityAdjuster<TEntity>));
+            Logger?.InvalidTypeAssignment(adjuster.GetType(), typeof(IEntityAdjuster<TEntity>));
             return false;
         }
         
@@ -195,7 +143,7 @@ public class CsvTableReader<TEntity> : ITableReader<TEntity, ImportContext>
 
         if (filter is not IRecordFilter<TEntity> castFilter)
         {
-            Logger?.InvalidTypeAssignment(filter?.GetType() ?? typeof(object), typeof(IRecordFilter<TEntity>));
+            Logger?.InvalidTypeAssignment(filter.GetType(), typeof(IRecordFilter<TEntity>));
             return false;
         }
 

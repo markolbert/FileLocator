@@ -1,6 +1,5 @@
 ﻿using System.Linq.Expressions;
 using Microsoft.Extensions.Logging;
-using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 
@@ -61,28 +60,28 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
         CompleteImport();
     }
 
+    public IAsyncEnumerable<TEntity> GetDataAsync( TContext context, CancellationToken ctx ) =>
+        GetData( context ).ToAsyncEnumerable();
+
     private bool InitializeInternal( WorksheetImportContext context, out ISheet? sheet )
     {
         sheet = null;
 
-        if( !File.Exists( context.ImportPath ) )
+        if( context.ImportStream == null )
         {
-            Logger?.FileNotFound( context.ImportPath );
+            Logger?.UndefinedStream();
             return false;
         }
-
-        var isXlsx = Path.GetExtension( context.ImportPath ).Equals( ".xlsx", StringComparison.OrdinalIgnoreCase );
 
         IWorkbook workbook;
 
         try
         {
-            using var fs = new FileStream( context.ImportPath, FileMode.Open, FileAccess.Read );
-            workbook = isXlsx ? new XSSFWorkbook( fs ) : new HSSFWorkbook( fs );
+            workbook = new XSSFWorkbook( context.ImportStream );
         }
         catch( Exception ex )
         {
-            Logger?.FileUnreadable( context.ImportPath, ex.Message );
+            Logger?.StreamUnreadable( ex.Message );
             return true;
         }
 
@@ -234,6 +233,15 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
         return false;
     }
 
+    IAsyncEnumerable<object> ITableReader.GetObjectDataAsync( ImportContext context, CancellationToken ctx )
+    {
+        if( context is TContext castContext )
+            return GetDataAsync( castContext, ctx );
+
+        Logger?.UnexpectedType( typeof( TContext ), context.GetType() );
+        return AsyncEnumerable.Empty<object>();
+    }
+
     bool ITableReader.SetAdjuster( IEntityAdjuster? adjuster )
     {
         if (adjuster == null)
@@ -244,7 +252,7 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
 
         if ( adjuster is not IEntityAdjuster<TEntity> castAdjuster )
         {
-            Logger?.InvalidTypeAssignment( adjuster?.GetType() ?? typeof(object), typeof( IEntityAdjuster<TEntity> ) );
+            Logger?.InvalidTypeAssignment( adjuster.GetType(), typeof( IEntityAdjuster<TEntity> ) );
             return false;
         }
 
@@ -262,7 +270,7 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
 
         if (filter is not IRecordFilter<TEntity> castFilter)
         {
-            Logger?.InvalidTypeAssignment(filter?.GetType() ?? typeof(object), typeof(IRecordFilter<TEntity>));
+            Logger?.InvalidTypeAssignment(filter.GetType(), typeof(IRecordFilter<TEntity>));
             return false;
         }
 

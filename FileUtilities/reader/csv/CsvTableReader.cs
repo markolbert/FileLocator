@@ -1,148 +1,77 @@
-﻿using CsvHelper;
-using Microsoft.Extensions.Logging;
-using System.Globalization;
+﻿using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
 
-public class CsvTableReader : ITableReader
+public class CsvTableReader( ILoggerFactory? loggerFactory = null ) : CsvTableReaderBase<DataRecord>( loggerFactory ), ITableReader
 {
-    private FileStream? _fs;
-    private StreamReader? _reader;
-
-    public CsvTableReader(
-        ILoggerFactory? loggerFactory = null
-    )
-    {
-        LoggerFactory = loggerFactory;
-        Logger = loggerFactory?.CreateLogger( GetType() );
-    }
-
-    protected ILoggerFactory? LoggerFactory { get; }
-    protected ILogger? Logger { get; }
-
-    protected CsvReader? CsvReader { get; private set; }
-    protected int CurrentRecord { get; private set; }
-
     public Type ImportedType => typeof( DataRecord );
-
-    public IRecordFilter<DataRecord>? Filter { get; set; }
-    public IEntityAdjuster<DataRecord>? EntityAdjuster { get; set; }
 
     public HashSet<int> GetReplacementIds() => EntityAdjuster?.GetReplacementIds() ?? [];
 
     public IEnumerable<DataRecord> GetData( ImportContext context )
     {
-        if( !File.Exists( context.ImportPath ) )
-        {
-            Logger?.FileNotFound( context.ImportPath );
+        if (!BeginGetData(context))
             yield break;
-        }
-
-        // initialize the filter, if one exists
-        if( !Filter?.Initialize() ?? false )
-            yield break;
-
-        if( !EntityAdjuster?.Initialize( context ) ?? false )
-            yield break;
-
-        // finally, complete whatever custom reader initialization
-        // may be defined
-        if( !Initialize() )
-            yield break;
-
-        CurrentRecord = 0;
-
-        try
-        {
-            _fs = File.Open( context.ImportPath, FileMode.Open, FileAccess.Read );
-            _reader = new StreamReader( _fs );
-
-            CsvReader = new CsvReader( _reader, CultureInfo.InvariantCulture );
-        }
-        catch( Exception ex )
-        {
-            Logger?.FileParsingError( context.ImportPath, ex.Message );
-            Dispose();
-
-#pragma warning disable CA2200
-
-            // ReSharper disable once PossibleIntendedRethrow
-            throw ex;
-#pragma warning restore CA2200
-        }
 
         var headerRead = false;
         var headers = new List<string>();
 
-        while( CsvReader.Read() )
+        while( CsvReader!.Read() )
         {
-            if( !headerRead && context.HasHeaders )
-            {
-                if( !CsvReader.ReadHeader() )
-                {
-                    Logger?.HeaderUnreadable( context.ImportPath );
-                    yield break;
-                }
-
-                headerRead = true;
-                headers = CsvReader.HeaderRecord!.ToList();
-
-                continue;
-            }
-
-            CurrentRecord++;
-
-            var curRecord = CreateDataRecord( context.ImportPath, headers );
-
-            if( !EntityAdjuster?.AdjustEntity( curRecord ) ?? false )
+            if (!ProcessHeader(context, ref headerRead, ref headers))
                 yield break;
 
-            if( Filter != null && !Filter.Include( curRecord ) )
-                continue;
+            switch( ProcessRecord( context, headers, out var curRecord ) )
+            {
+                case ProcessRecordResult.Okay:
+                    yield return curRecord;
+                    break;
 
-            yield return curRecord;
+                case ProcessRecordResult.Failed:
+                    yield break;
+
+                case ProcessRecordResult.FilteredOut:
+                    // no op; just continue to next record
+                    break;
+            }
         }
 
         OnReadingEnded();
     }
 
-    protected virtual bool Initialize() => true;
-
-    // CsvReader will always be non-null when this is called
-    protected virtual DataRecord CreateDataRecord( string importPath, List<string> headers )
+    // The CancellationToken arg is needed to conform to the interface, but CsvReader does not 
+    // support using it in ReadAsync()...which is weird
+#pragma warning disable CS8425 // Async-iterator member has one or more parameters of type 'CancellationToken' but none of them is decorated with the 'EnumeratorCancellation' attribute, so the cancellation token parameter from the generated 'IAsyncEnumerable<>.GetAsyncEnumerator' will be unconsumed
+    public async IAsyncEnumerable<DataRecord> GetDataAsync(ImportContext context, CancellationToken ctx)
+#pragma warning restore CS8425 // Async-iterator member has one or more parameters of type 'CancellationToken' but none of them is decorated with the 'EnumeratorCancellation' attribute, so the cancellation token parameter from the generated 'IAsyncEnumerable<>.GetAsyncEnumerator' will be unconsumed
     {
-        var retVal = new DataRecord( CurrentRecord, headers );
+        if( !BeginGetData( context ) )
+            yield break;
 
-        for( var colIdx = 0; colIdx < CsvReader!.ColumnCount; colIdx++ )
+        var headerRead = false;
+        var headers = new List<string>();
+
+        while (await CsvReader!.ReadAsync())
         {
-            if( retVal.AddValue( colIdx, CsvReader[ colIdx ]! ) )
-                continue;
+            if( !ProcessHeader( context, ref headerRead, ref headers ) )
+                yield break;
 
-            Logger?.DuplicateColumnRead( importPath, colIdx, CurrentRecord );
+            switch (ProcessRecord(context, headers, out var curRecord))
+            {
+                case ProcessRecordResult.Okay:
+                    yield return curRecord;
+                    break;
+
+                case ProcessRecordResult.Failed:
+                    yield break;
+
+                case ProcessRecordResult.FilteredOut:
+                    // no op; just continue to next record
+                    break;
+            }
         }
 
-        return retVal;
-    }
-
-    protected virtual void OnReadingEnded()
-    {
-        // release the file!
-        if( _fs != null )
-        {
-            _fs.Close();
-            _fs.Dispose();
-            _fs = null;
-        }
-
-        // save whatever changes/updates were recorded
-        EntityAdjuster?.SaveAdjustmentRecords();
-    }
-
-    public void Dispose()
-    {
-        _fs?.Dispose();
-        _reader?.Dispose();
-        CsvReader?.Dispose();
+        OnReadingEnded();
     }
 
     bool ITableReader.TryGetData(
@@ -154,6 +83,9 @@ public class CsvTableReader : ITableReader
         return true;
     }
 
+    IAsyncEnumerable<object> ITableReader.GetObjectDataAsync( ImportContext context, CancellationToken ctx ) =>
+        GetDataAsync( context, ctx );
+
     bool ITableReader.SetAdjuster( IEntityAdjuster? adjuster )
     {
         if (adjuster == null)
@@ -164,7 +96,7 @@ public class CsvTableReader : ITableReader
 
         if ( adjuster is not IEntityAdjuster<DataRecord> castAdjuster )
         {
-            Logger?.InvalidTypeAssignment( adjuster?.GetType() ?? typeof( object ),
+            Logger?.InvalidTypeAssignment( adjuster.GetType(),
                                            typeof( IEntityAdjuster<DataRecord> ) );
             return false;
         }
@@ -183,7 +115,7 @@ public class CsvTableReader : ITableReader
 
         if ( filter is not IRecordFilter<DataRecord> castFilter )
         {
-            Logger?.InvalidTypeAssignment( filter?.GetType() ?? typeof( object ), typeof( IRecordFilter<DataRecord> ) );
+            Logger?.InvalidTypeAssignment( filter.GetType(), typeof( IRecordFilter<DataRecord> ) );
             return false;
         }
 

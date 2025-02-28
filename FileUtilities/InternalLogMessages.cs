@@ -50,6 +50,13 @@ internal static partial class InternalLogMessages
 
     #endregion
 
+    [LoggerMessage(LogLevel.Critical, Message = "{caller}: Could not read stream, message was '{mesg}'")]
+    internal static partial void StreamUnreadable(
+        this ILogger logger,
+        string mesg,
+        [CallerMemberName] string caller = ""
+    );
+
     #region file-related
 
     [LoggerMessage(LogLevel.Warning,

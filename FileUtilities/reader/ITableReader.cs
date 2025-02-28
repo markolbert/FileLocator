@@ -1,4 +1,6 @@
-﻿namespace J4JSoftware.FileUtilities;
+﻿using System.Runtime.CompilerServices;
+
+namespace J4JSoftware.FileUtilities;
 
 public interface ITableReader : IDisposable
 {
@@ -10,6 +12,7 @@ public interface ITableReader : IDisposable
     HashSet<int> GetReplacementIds();
 
     bool TryGetData( ImportContext context, out IEnumerable<object>? data );
+    IAsyncEnumerable<object> GetObjectDataAsync( ImportContext context, CancellationToken ctx );
 }
 
 public interface ITableReader<TEntity, in TContext> : ITableReader
@@ -20,4 +23,5 @@ public interface ITableReader<TEntity, in TContext> : ITableReader
     IEntityAdjuster<TEntity>? EntityAdjuster { get; set; }
 
     IEnumerable<TEntity> GetData(TContext context);
+    IAsyncEnumerable<TEntity> GetDataAsync( TContext context, CancellationToken ctx );
 }

@@ -150,6 +150,37 @@ public static partial class PublicLogMessages
 
     #endregion
 
+    [LoggerMessage(Level = LogLevel.Error,
+                   Message = "{caller}: undefined import stream")]
+    public static partial void UndefinedStream(
+        this ILogger logger,
+        [CallerMemberName] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Error,
+                   "{caller}: Could not parse stream, message was '{mesg}' ({lineNum} : {srcFile})")]
+    public static partial void StreamParsingError(
+        this ILogger logger,
+        string mesg,
+        [CallerMemberName] string caller = "",
+        [CallerFilePath] string srcFile = "",
+        [CallerLineNumber] int lineNum = 0
+    );
+
+    [LoggerMessage(LogLevel.Error, "{caller}: Could not read header from stream")]
+    public static partial void StreamHeaderUnreadable(
+        this ILogger logger,
+        [CallerMemberName] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Error, "{caller}: Duplicate column {colIdx} value read for record {curRecord}")]
+    public static partial void DuplicateColumnReadFromStream(
+        this ILogger logger,
+        int colIdx,
+        int curRecord,
+        [CallerMemberName] string caller = ""
+    );
+
     #region file-related
 
     [LoggerMessage(Level = LogLevel.Error,
