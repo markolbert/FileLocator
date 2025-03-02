@@ -1,97 +1,79 @@
-# File Utilities: Importing Data
+# Importing Data
 
-The basic outline for importing data using this assembly is:
-
-- locate the file to import;
-- define the importer to use;
-- import the data
-
-## Table of Contents
-
-- [Resolving files](#resolving-files)
+- [Why this API?](#why-this-api)
+- [Key limitation](#key-limitation)
 - [Defining the target entity](#defining-the-target-entity)
 - [Reading CSV files]()
 - [Reading Excel files]()
 - [Resolving Paths]()
 - [Supporting Logic]()
+- [JSON utilities]()
 
-## Resolving files
+## Why this API?
 
-To read a file you have to find it. You can specify files in a fully-specified way, but sometimes it's more convenient to specify just a file name and a set of directories where the file should be located.
+You can read CSV, JSON and Excel files in a variety of ways, including [CSVHelper](https://joshclose.github.io/CsvHelper) and [NPOI](https://github.com/nissl-lab/npoi), each of which I use here. So why did I develop this API?
 
-The library supports that kind of searching. The process is built around the concept of **file contexts**. At its most basic, an `IFileContext` defines both a **path** to a file and a **scope** within which the file exists:
+I had a task involving importing data in both CSV and tabular Excel spreadsheets from a source I did not control and that was used by a variety of data entry people, who didn't alwyas follow the same protocols when posting information. Consequently, the imported data had to be cleaned up before it was useful.
 
-```csharp
-public interface IFileContext
-{
-    string FilePath { get; set; }
-    string Scope { get; }
-}
-```
+This API grew out of that need: to be able to treat CSV and tabular Excel data in the same way, and to be able to clean it up during import.
 
-The file path may or not be fully-defined (i.e., it might be relative, or simply the name of a file which exists in some directory).
+I quickly found I was using two kinds of cleanup techniques:
 
-Scope defines the set of directories within which the file may exist. You can have multiple scopes defined in a project, each defined by a unique name. Mapping a scope to a set of directories is done by implementing the `IDirectoryResolver` interface in your project:
+- correct what was imported by applying an algorithm to it (e.g., always replace 'Street' with 'St' to enforce consistency); and,
+- replace field values that were determined to be incorrect.
 
-```csharp
-public interface IDirectoryResolver
-{
-    List<string> GetDirectories( string scope );
-}
-```
+Both types of correction can be used by this API, either separately or together.
 
-Resolving a file name to a particular file is defined by the `IFileResolver` interface:
+## Key limitation
 
-```csharp
-public interface IFileResolver
-{
-    bool TryResolveFile(
-        IFileContext source,
-        out List<string> filePaths,
-        bool searchSubDir = false,
-        FileResolution resolution = FileResolution.SingleFile
-    );
-}
-```
+In order to determine which record should be updated when a field value replacement is made, the records have to have a uniquely identifying key.
 
-A default implementation of `IFileResolver` is provided by the `FileResolver` class. By default, it treats finding multiple matching file names in the directories it searches as an error (i.e., it assumes the file name is unique within its scope), but you can override that behavior by specifying `FileResolution.SingleFile` for the `resolution` parameter. Not finding a match is always an error.
+The current verison of the API requires that this key field be an integer.
 
-## 
+Relaxing that constraint (e.g., so a non-integer, or composite key) could be used turns out to be fairly involved. I may return to the task of implementing more complex unique keys in a future verison of the API.
 
 ## Defining the Target Entity
 
-By itself a file context isn't terribly useful, because while it describes how to find a file to read, it doesn't describe the entities you want to create when you read the tabular data (which would be a single line in a CSV file, or a single row in Excel tabular data).
+Central to importing and correcting data is defining the shape of the data being imported and corrected. The API uses plain-old classes to do this, with property attribute decorations supplying essential information. Here's an example:
 
-The target entity information is defined by the `ITableSource` interface, which extends `IFileContext`:
-
-```csharp
-public interface ITableSource : IFileContext
+```c#
+public class Campaign : IPropertyLengths
 {
-    Type EntityType { get; }
-    string FileType { get; }
+    [ CsvField( "LGL Campaign ID" ) ]
+    public int Id { get; set; }
 
-    string? TweakPath { get; set; }
+    [ CsvField("Name", typeof(CsvTrimmedTextConverter)) ]
+    public string Name { get; set; } = null!;
+
+    [ CsvField( "Code" ) ]
+    public string? Code { get; set; }
+
+    [ CsvField( "Description" ) ]
+    public string? Description { get; set; }
+
+    [ CsvField( "Goal" ) ]
+    public string? Goal { get; set; }
+
+    [ CsvField( "Start Date" ) ]
+    public DateTime? StartDate { get; set; }
+
+    [ CsvField( "End Date" ) ]
+    public DateTime? EndDate { get; set; }
+
+    [ CsvField( "Is Active?" ) ]
+    public bool IsActive { get; set; }
+
+    public ICollection<Appeal> Appeals { get; set; }
+    public ICollection<Gift> Gifts { get; set; }
+    public ICollection<Goal> Goals { get; set; }
+    public ICollection<RelatedGift> RelatedGifts { get; set; }
 }
 ```
 
-`TweakPath` is the path to a file -- which may or may not need to be resolved to find the actual file -- that contains the data needed to adjust values for specified imported records. We'll come back to tweaking in the section [Tweaking imported data]().
+This class is used in an EF Core database (hence the `ICollection` relationship properties at the end), but you can ignore that for purposes of this explanation.
 
-Mating a table source and a file context is defined in an interface unique to a given file format, either CSV or Excel. There are two such interfaces defined in the assembly:
+A `CsvField` attribute maps the property to a particular field within a CSV stream. It must include the name of the field the property is bound to, and may include an optional `Type` value defining a class that will convert raw text read from a CSV file to a field value. That later capability is often necessary because `CSVHelper` makes  assumptions about parsing text values that may need to be overridden in a specific situation.
 
-|Source File Type|Table Source Interface|Parent Interfaces|
-|----------------|----------------------|-----------------|
-|CSV file|`ICSVTableSource`|`ITableSource`, `ICSVContext`|
-|Excel file|`IWorksheetTableSource`|`ITableSource`, `IWorksheetContext`|
+For CSV files, you can also exclude properties from the import process by decorating the import class with a `CsvExcluded` attribute. It takes a list of property names, separated by commas. However, that generally shouldn't be necessary, since any property **not** decorated with a `CsvField` attribute is ignored.
 
-`ICSVContext` and `IWorksheetContext` are described below, in the sections about reading CSV and Excel files.
-
-## Reading CSV Files
-
-For CSV files `IFileContext` is extended by `ICSVContext` to define whether or not the CSV file has a header:
-
-```csharp
-public interface ICsvContext : IFileContext
-{
-    bool HasHeader { get; }
-}
-```
+ 

@@ -1,22 +1,18 @@
 # File Utilities: Overview
 
-This library simplifies the *reading* of CSV, JSON and Excel files and the *writing* of JSON files and Excel files which contain tabular data.
+This library simplifies the *reading* of CSV, JSON and Excel streams and the *writing* of JSON and Excel files which contain tabular data.
 
 It also includes methods for searching directories for files, and ensuring, if necessary, that they can be written.
 
+## Dedication
+
+This library is dedicated to the developers of the various NPOI projects, particularly the ones behind a [great C# implementation of it](https://github.com/nissl-lab/npoi), and the developers of the [CsvHelper](https://joshclose.github.io/CsvHelper) project. Without their tireless efforts to simplify reading and writing CSV and Excel files I could not have written this API.
+
 ## Table of Contents
 
-- Locating Files
-- Importing data
-  - Cleaning fields
-  - Replacing fields
-  - Reading JSON files
-  - Reading CSV files
-  - Reading Excel files
-- Exporting data
-  - Overview
-  - Styles
-  - Fluent API
+- [Locating Files](docs/locating.md)
+- [Importing data](docs/importing.md)
+- [Exporting data](docs/exporting.md)
 
 ## Introduction
 
@@ -34,14 +30,6 @@ Writing Excel files is done using a fluent API that modifies an exporter object 
 Reading and creating Excel files is handled by the [NPOI package](https://github.com/nissl-lab/npoi), which was inspried by the [Apache POI project](https://poi.apache.org/). I greatly appreciate all the work both library's authors have done to make reading and writing Excel files in C# straightforward.
 
 I would also like to thank the authors of [CsvHelper](https://joshclose.github.io/CsvHelper/), a C# library that I use extensively here to read CSV files.
-
-## Why This Level of Abstraction?
-
-When you first read the documentation you may wonder about the level of abstraction involved. Aren't there simpler ways to import a CSV file or Excel tabular data?
-
-In fact, there are...but the source material is very different. One's a simple file, the other is a set of spreadsheet cell values.
-
-The abstraction results from the goal of trying to treat the two different sources of data in a common way.
 
 ## Data correction
 
