@@ -21,9 +21,6 @@
 
 #endregion
 
-using System;
-using System.Collections.Generic;
-using System.IO;
 using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
@@ -73,7 +70,7 @@ public static class FileLocatorExtensions
         return fileLoc;
     }
 
-    public static FileLocator Required( this FileLocator fileLoc )
+    public static FileLocator Exists( this FileLocator fileLoc )
     {
         fileLoc.RequiredPathState |= PathState.Exists;
         return fileLoc;
@@ -121,12 +118,12 @@ public static class FileLocatorExtensions
     ) =>
         fileLoc.MatchesMet ? fileLoc : fileLoc.ScanDirectory( AppDomain.CurrentDomain.BaseDirectory, secondaryPaths );
 
-    public static FileLocator ScanDirectories( this FileLocator fileLoc, IEnumerable<string> dirPaths )
+    public static FileLocator ScanDirectories( this FileLocator fileLoc, IEnumerable<string> reqdPaths )
     {
         if( fileLoc.MatchesMet )
             return fileLoc;
 
-        foreach( var dirPath in dirPaths )
+        foreach( var dirPath in reqdPaths )
         {
             fileLoc.ScanDirectory( dirPath );
 
