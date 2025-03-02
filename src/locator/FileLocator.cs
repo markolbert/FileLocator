@@ -60,7 +60,7 @@ public class FileLocator : IEnumerable<PathInfo>
     internal StringComparison FileSystemComparison =>
         FileSystemIsCaseSensitive ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
 
-    public int MaximumMatches { get; set; }
+    public int MaximumMatches { get; set; } = -1;
     public int Matches => Results.Count;
     internal bool MatchesMet => MaximumMatches > 0 && Matches >= MaximumMatches;
 
