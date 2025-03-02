@@ -33,7 +33,7 @@ public class FileLocatorTests
     {
         var fileLoc = new FileLocator(_loggerFactory)
                      .FileToFind( path )
-                     .Required()
+                     .Exists()
                      .ScanExecutableDirectory();
 
         fileLoc.Matches.Should().Be( matches );
@@ -50,7 +50,7 @@ public class FileLocatorTests
     {
         var fileLoc = new FileLocator(_loggerFactory)
                      .FileToFind( path )
-                     .Required()
+                     .Exists()
                      .ScanCurrentDirectory();
 
         fileLoc.Matches.Should().Be( matches );
@@ -63,7 +63,7 @@ public class FileLocatorTests
     {
         var fileLoc = new FileLocator(_loggerFactory)
                      .FileToFind( path )
-                     .Required();
+                     .Exists();
 
         fileLoc.ScanExecutableDirectory();
 
@@ -80,7 +80,7 @@ public class FileLocatorTests
 
         var fileLoc = new FileLocator(_loggerFactory)
                      .FileToFind( fileToFind )
-                     .Required()
+                     .Exists()
                      .ScanDirectories( toSearch );
 
         fileLoc.Matches.Should().Be( matches );
