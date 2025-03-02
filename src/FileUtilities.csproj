@@ -11,10 +11,16 @@
 	  <Product>J4JSoftware Utilities for working with files and tabular data</Product>
 	  <Description>a utility framework to simplify working with files and tabular data</Description>
 	  <Copyright>© Mark A. Olbert all rights reserved</Copyright>
-	  <RepositoryUrl>https://github.com/markolbert/ProgrammingUtilities</RepositoryUrl>
+	  <Version>1.0.0.0</Version>
+	  <AssemblyVersion>1.0.0.0</AssemblyVersion>
+	  <RepositoryUrl>https://github.com/markolbert/FileUtilities</RepositoryUrl>
 	  <RepositoryType>git</RepositoryType>
-	  <Version>0.5.0.0</Version>
-	  <AssemblyVersion>0.5.0.0</AssemblyVersion>
+	  <EmbedUntrackedSources>true</EmbedUntrackedSources>
+	  <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+	  <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+	  <PackageReleaseNotes>initial release</PackageReleaseNotes>
+	  <PackageReadmeFile>readme.md</PackageReadmeFile>
+	  <PackageLicenseFile>license.md</PackageLicenseFile>
   </PropertyGroup>
 
 	<ItemGroup>
@@ -23,10 +29,16 @@
 		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.2" />
 		<PackageReference Include="NPOI" Version="2.7.2" />
 		<PackageReference Include="System.Linq.Async" Version="6.0.1" />
+		<PackageReference Include="Serilog.Extensions.Hosting" Version="9.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <ProjectReference Include="..\..\GeneralUtilities\src\GeneralUtilities.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<None Include="../readme.md" Pack="true" PackagePath="\" />
+		<None Include="../license.md" Pack="true" PackagePath="\" />
 	</ItemGroup>
 
 	<ItemGroup>
