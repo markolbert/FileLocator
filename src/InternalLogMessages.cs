@@ -101,9 +101,63 @@ internal static partial class InternalLogMessages
         [ CallerMemberName ] string caller = ""
     );
 
+    #region file locator related
+
+    [LoggerMessage(LogLevel.Trace, "{caller}: starting validation of path {path} ")]
+    internal static partial void PathValidationStart(
+        this ILogger logger,
+        string path,
+        [ CallerMemberName ] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Trace, "{caller}: added required file extension {ext} ")]
+    internal static partial void AddedRequiredExtension(
+        this ILogger logger,
+        string ext,
+        [CallerMemberName] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Trace, "{caller}: found file {path} ")]
+    internal static partial void FoundFile(
+        this ILogger logger,
+        string path,
+        [CallerMemberName] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Trace, "{caller}: checking {folder} for {path}")]
+    internal static partial void CheckAlternativeLocation(
+        this ILogger logger,
+        string folder,
+        string path,
+        [CallerMemberName] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Error, "{caller}: file {path} is not accessible" )]
+    internal static partial void FileNotAccessible(
+        this ILogger logger,
+        string path,
+        [ CallerMemberName ] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Error, "{caller}: unsupported operating system, {mesg}")]
+    internal static partial void UnsupportedOs(
+        this ILogger logger,
+        string mesg,
+        [CallerMemberName] string caller = ""
+    );
+
+    [LoggerMessage( LogLevel.Trace, "{caller}: invalid path, {mesg}")]
+    internal static partial void InvalidPath(
+        this ILogger logger,
+        string mesg,
+        [ CallerMemberName ] string caller = ""
+    );
+
+    #endregion
+
     #region file-related
 
-    [ LoggerMessage( LogLevel.Warning,
+    [LoggerMessage( LogLevel.Warning,
                      Message =
                          "{caller}: Could not read file '{file}', message was '{mesg}'; deleting and re-creating instead" ) ]
     internal static partial void WorkbookFileUnreadable(

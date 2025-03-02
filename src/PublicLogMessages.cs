@@ -76,7 +76,10 @@ public static partial class PublicLogMessages
     [ LoggerMessage( LogLevel.Error, Message = "{caller}: {mesg}" ) ]
     public static partial void Error( this ILogger logger, string mesg, [ CallerMemberName ] string caller = "" );
 
-    [ LoggerMessage( LogLevel.Error, "{caller}: End of JSON stream encountered" ) ]
+    [LoggerMessage(LogLevel.Error, Message = "{caller}: exception when trying to {action}, message was {exMesg}")]
+    public static partial void Exception(this ILogger logger, string action, string exMesg, [CallerMemberName] string caller = "");
+
+    [LoggerMessage( LogLevel.Error, "{caller}: End of JSON stream encountered" ) ]
     public static partial void EndOfJson( this ILogger logger, [ CallerMemberName ] string caller = "" );
 
     [ LoggerMessage( LogLevel.Warning, "{caller}: {type} does not contain a public property named {propName}" ) ]
