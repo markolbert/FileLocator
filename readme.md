@@ -2,8 +2,11 @@
 
 This library simplifies the *reading* of CSV, JSON and Excel files and the *writing* of JSON files and Excel files which contain tabular data.
 
+It also includes methods for searching directories for files, and ensuring, if necessary, that they can be written.
+
 ## Table of Contents
 
+- Locating Files
 - Importing data
   - Cleaning fields
   - Replacing fields
