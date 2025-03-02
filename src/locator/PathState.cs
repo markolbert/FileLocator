@@ -23,7 +23,7 @@
 
 namespace J4JSoftware.FileUtilities;
 
-[Flags ]
+[ Flags ]
 public enum PathState
 {
     Exists = 1 << 0,
