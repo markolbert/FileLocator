@@ -1,4 +1,5 @@
 ﻿using System.Runtime.CompilerServices;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using Microsoft.Extensions.Logging;
 
 namespace J4JSoftware.FileUtilities;
@@ -404,8 +405,14 @@ internal static partial class InternalLogMessages
         [ CallerMemberName ] string caller = ""
     );
 
-    [ LoggerMessage( Level = LogLevel.Error,
-                     Message = "{caller}: Could not find ISheet {sheetName}, message was '{mesg}'" ) ]
+    [LoggerMessage(LogLevel.Error, "{caller}: Undefined sheet name")]
+    internal static partial void NoSheetName(
+        this ILogger logger,
+        [CallerMemberName] string caller = ""
+    );
+
+    [LoggerMessage( Level = LogLevel.Error,
+                    Message = "{caller}: Could not find ISheet {sheetName}, message was '{mesg}'" ) ]
     internal static partial void MissingSheetWithMessage(
         this ILogger logger,
         string sheetName,
@@ -635,6 +642,59 @@ internal static partial class InternalLogMessages
         Type type,
         string prop,
         string mesg,
+    [ CallerMemberName ] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Error, "{caller}: NPOI field {npoiName} cannot be mapped to {importedType}::{importedName} ({propType})")]
+    internal static partial void InvalidNpoiMapping(
+        this ILogger logger,
+        string importedName,
+        string importedType,
+        string npoiName,
+        string propType,
         [ CallerMemberName ] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Error, "{caller}: duplicate NPOI field {fieldName}")]
+    internal static partial void DuplicateNpoiField(
+        this ILogger logger,
+        string fieldName,
+        [ CallerMemberName ] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Error, "{caller}: NPOI field {npoiField} does not exist")]
+    internal static partial void UnmappedNpoiField(
+        this ILogger logger,
+        string npoiField,
+        [ CallerMemberName ] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Error, "{caller}: unsupported NPOI type {type}")]
+    internal static partial void UnsupportedNpoiType(
+        this ILogger logger,
+        string type,
+        [ CallerMemberName ] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Error, "{caller}: {type} does not implement INpoiConverter, ignoring property")]
+    internal static partial void InvalidNpoiConverter(
+        this ILogger logger,
+        string type,
+        [CallerMemberName] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Error, "{caller}: no INpoiConverter for type {type}, ignoring property")]
+    internal static partial void UndefinedNpoiConverter(
+        this ILogger logger,
+        string type,
+        [CallerMemberName] string caller = ""
+    );
+
+    [LoggerMessage(LogLevel.Error, "{caller}: could not create instance of {type}, message was '{mesg}', ignoring property")]
+    internal static partial void NpoiConverterNotCreatable(
+        this ILogger logger,
+        string type,
+        string mesg,
+        [CallerMemberName] string caller = ""
     );
 }

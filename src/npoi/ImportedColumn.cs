@@ -1,88 +1,48 @@
-﻿using System.Linq.Expressions;
-using J4JSoftware.Utilities;
+﻿using System.Reflection;
 using Microsoft.Extensions.Logging;
 using NPOI.SS.UserModel;
 
 namespace J4JSoftware.FileUtilities;
 
-public record ImportedColumn<TEntity, TProp> : IImportedColumn
+public class ImportedColumn<TEntity> : IImportedColumn<TEntity>
 {
-    private readonly ILogger? _logger;
     private readonly Action<TEntity, object?> _setter;
+    private readonly INpoiConverter _converter;
+    private readonly ILogger? _logger;
 
     public ImportedColumn(
-        int colNum,
-        string colNameInSheet,
-        Expression<Func<TEntity, TProp?>> propExpr,
+        string colNameInSheet, 
+        PropertyInfo propInfo,
+        INpoiConverter converter,
         ILoggerFactory? loggerFactory
     )
     {
-        _logger = loggerFactory?.CreateLogger( GetType() );
+        _logger = loggerFactory?.CreateLogger<ImportedColumn<TEntity>>();
 
-        ColumnNumber = colNum;
         ColumnNameInSheet = colNameInSheet;
+        PropertyName = propInfo.Name;
+        PropertyType = propInfo.PropertyType;
+        _converter = converter;
 
-        var exprHelper = new ExpressionHelpers( loggerFactory );
-
-        if( !exprHelper.TryGetPropertyInfo( propExpr, out var propInfo ) )
-        {
-            _logger?.UnboundProperty( GetType(), propExpr.ToString(), "Unknown" );
-            PropertyName = "Unknown";
-        }
-        else PropertyName = propInfo!.Name;
-
-        _setter = exprHelper.CreateObjectPropertySetter( propExpr )
-         ?? throw new FileUtilityException( GetType(),
-                                            "ctor",
-                                            $"Could not create property setter from '{propExpr}'" );
+        _setter = ( e, v ) => propInfo.SetValue( e, v );
     }
 
-    public int ColumnNumber { get; }
     public string ColumnNameInSheet { get; }
+    public int ColumnNumber { get; set; } = -1;
     public string PropertyName { get; }
+    public Type PropertyType { get; }
 
-    public bool SetValue( ISheet sheet, object entity, ICell cell )
+    public bool SetValue( ISheet sheet, TEntity entity, ICell cell )
     {
-        if( entity is TEntity castEntity )
-            return SetValue( sheet, castEntity, cell );
+        if( ColumnNumber < 0 )
+        {
+            _logger?.InvalidNpoiMapping( PropertyName, typeof( TEntity ).Name, ColumnNameInSheet, PropertyType.Name );
+            return false;
+        }
 
-        _logger?.UnexpectedType( typeof( TEntity ), entity.GetType() );
-
-        return false;
-    }
-
-    private bool SetValue( ISheet sheet, TEntity entity, ICell cell )
-    {
         try
         {
-            switch( Type.GetTypeCode( typeof( TProp ) ) )
-            {
-                case TypeCode.Boolean:
-                    _setter( entity, cell.BooleanCellValue );
-                    break;
-
-                case TypeCode.DateTime:
-                    _setter( entity, cell.DateCellValue );
-                    break;
-
-                case TypeCode.Int32:
-                    var intValue = Convert.ToInt32( cell.NumericCellValue );
-                    _setter( entity, intValue );
-
-                    break;
-
-                case TypeCode.Double:
-                    _setter( entity, cell.NumericCellValue );
-                    break;
-
-                case TypeCode.String:
-                    _setter( entity, cell.StringCellValue );
-                    break;
-
-                default:
-                    _logger?.UnsupportedCellType( typeof( TProp ), sheet.SheetName );
-                    break;
-            }
+            _setter( entity, _converter.ConvertValue( cell ) );
 
             return true;
         }
@@ -91,5 +51,15 @@ public record ImportedColumn<TEntity, TProp> : IImportedColumn
             _logger?.SetValueFailed( typeof( TEntity ).Name, PropertyName, ex.Message );
             return false;
         }
+    }
+
+    bool IImportedColumn.SetValue( ISheet sheet, object entity, ICell cell )
+    {
+        if (entity is TEntity castEntity)
+            return SetValue(sheet, castEntity, cell);
+
+        _logger?.UnexpectedType(typeof(TEntity), entity.GetType());
+
+        return false;
     }
 }

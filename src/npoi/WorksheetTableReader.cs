@@ -1,5 +1,7 @@
-﻿using System.Linq.Expressions;
+﻿using System.ComponentModel;
+using System.Reflection;
 using Microsoft.Extensions.Logging;
+using NPOI.HSSF.UserModel;
 using NPOI.SS.UserModel;
 using NPOI.XSSF.UserModel;
 
@@ -9,14 +11,94 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
     where TEntity : class, new()
     where TContext : WorksheetImportContext
 {
-    private readonly Dictionary<int, IImportedColumn> _columns = [];
+    private readonly List<IImportedColumn> _columns = [];
 
     public WorksheetTableReader(
+        IEnumerable<INpoiConverter> converters,
         ILoggerFactory? loggerFactory = null
     )
     {
         LoggerFactory = loggerFactory;
         Logger = LoggerFactory?.CreateLogger( GetType() );
+
+        CreateColumnMappings(converters, loggerFactory);
+    }
+
+    private void CreateColumnMappings(IEnumerable<INpoiConverter> converters, ILoggerFactory? loggerFactory )
+    {
+        var builtInConverters = new Dictionary<Type, INpoiConverter>();
+
+        foreach (var builtIn in converters)
+        {
+            if (builtInConverters.TryGetValue(builtIn.TargetType, out var _))
+            {
+                Logger?.SkippedDuplicate(builtIn.TargetType.Name, "built-in INpoiConverter");
+                continue;
+            }
+
+            builtInConverters.Add(builtIn.TargetType, builtIn);
+        }
+
+        var customConverters = new Dictionary<Type, INpoiConverter>();
+
+        foreach (var mappingInfo in typeof(TEntity).GetProperties()
+                                                     .Where(p => p is { CanRead: true, CanWrite: true }
+                                                              && p.GetSetMethod() != null
+                                                              && p.GetCustomAttribute<NpoiMappingAttribute>() != null)
+                                                     .Select(p => new
+                                                     {
+                                                         PropertyInfo = p,
+                                                         NpoiAttribute =
+                                                              p.GetCustomAttribute<NpoiMappingAttribute>()!
+                                                     }))
+        {
+            var converterType = mappingInfo.NpoiAttribute.ConverterType;
+
+            if (converterType == null)
+            {
+                // see if the property type is one of the built-in converters
+                if (builtInConverters.TryGetValue(mappingInfo.PropertyInfo.PropertyType, out var temp))
+                    _columns.Add(new ImportedColumn<TEntity>(mappingInfo.NpoiAttribute.NpoiFieldName,
+                                                                 mappingInfo.PropertyInfo,
+                                                                 temp,
+                                                                 loggerFactory));
+                else Logger?.UndefinedNpoiConverter(mappingInfo.PropertyInfo.PropertyType.Name);
+
+                continue;
+            }
+
+            // see if the converter type is already created
+            if (customConverters.TryGetValue(converterType, out var temp2))
+            {
+                _columns.Add(new ImportedColumn<TEntity>(mappingInfo.NpoiAttribute.NpoiFieldName,
+                                                             mappingInfo.PropertyInfo,
+                                                             temp2,
+                                                             loggerFactory));
+                continue;
+            }
+
+            // make sure the converter type actually is an INpoiConverter
+            if (converterType.GetInterface(nameof(INpoiConverter)) == null)
+            {
+                Logger?.UndefinedNpoiConverter(mappingInfo.PropertyInfo.PropertyType.Name);
+                continue;
+            }
+
+            try
+            {
+                var converter = (INpoiConverter)Activator.CreateInstance(converterType)!;
+                customConverters.Add(converterType, converter);
+
+                _columns.Add(new ImportedColumn<TEntity>(mappingInfo.NpoiAttribute.NpoiFieldName,
+                                                           mappingInfo.PropertyInfo,
+                                                           converter,
+                                                           loggerFactory));
+            }
+            catch (Exception ex)
+            {
+                Logger?.NpoiConverterNotCreatable(converterType.Name, ex.Message);
+            }
+        }
     }
 
     protected ILoggerFactory? LoggerFactory { get; }
@@ -38,19 +120,19 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
             var row = sheet.GetRow( rowNum );
             var entity = new TEntity();
 
-            foreach( var kvp in _columns )
+            foreach (var column in _columns.Where(c=>c.ColumnNumber>0  ))
             {
-                var cell = row.GetCell( kvp.Key );
-                if( cell == null )
+                var cell = row.GetCell(column.ColumnNumber);
+                if (cell == null)
                     continue;
 
-                if( kvp.Value.SetValue( sheet, entity, cell ) )
+                if (column.SetValue(sheet, entity, cell))
                     continue;
 
-                Logger?.FailedToSetCellValue( kvp.Key, rowNum );
+                Logger?.FailedToSetCellValue(column.ColumnNumber, rowNum);
             }
 
-            if( !EntityAdjuster?.AdjustEntity( entity ) ?? false )
+            if ( !EntityAdjuster?.AdjustEntity( entity ) ?? false )
                 yield break;
 
             if( Filter == null || Filter.Include( entity ) )
@@ -73,11 +155,23 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
             return false;
         }
 
+        if( string.IsNullOrWhiteSpace( context.SheetName ) )
+        {
+            Logger?.NoSheetName();
+            return false;
+        }
+
         IWorkbook workbook;
 
         try
         {
-            workbook = new XSSFWorkbook( context.ImportStream );
+            workbook = context.WorksheetType switch
+            {
+                WorksheetType.Xlsx => new XSSFWorkbook( context.ImportStream ),
+                WorksheetType.Xls => new HSSFWorkbook( context.ImportStream ),
+                _ => throw new InvalidEnumArgumentException(
+                    $"Unsupported {nameof( WorksheetType )} value '{context.WorksheetType.ToString()}'" )
+            };
         }
         catch( Exception ex )
         {
@@ -90,7 +184,7 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
             sheet = workbook.GetSheet( context.SheetName );
 
             return sheet != null
-             && ValidateColumns( context, sheet )
+             && ValidateColumns( sheet )
              && Initialize();
         }
         catch( Exception ex )
@@ -100,7 +194,7 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
         }
     }
 
-    private bool ValidateColumns( WorksheetImportContext context, ISheet sheet )
+    private bool ValidateColumns( ISheet sheet )
     {
         var headerRow = sheet.GetRow( 0 );
 
@@ -110,99 +204,53 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
             return false;
         }
 
-        if( _columns.Count == 0 )
-        {
-            Logger?.NoColumnMappings( sheet.SheetName );
-            return false;
-        }
-
-        var matchedColumns = 0;
+        var npoiFields = new List<string>();
 
         for( var colNum = 0; colNum < headerRow.LastCellNum; colNum++ )
         {
-            var cell = headerRow.GetCell( colNum );
+            var cell = headerRow.GetCell(colNum);
 
-            if( cell == null || !_columns.TryGetValue( colNum, out var column ) )
+            if (cell == null )
                 continue;
 
-            if( column.ColumnNameInSheet.Equals( cell.StringCellValue, StringComparison.OrdinalIgnoreCase ) )
-                matchedColumns++;
-            else
+            npoiFields.Add( cell.StringCellValue );
+        }
+
+        var retVal = true;
+
+        // check for duplicate fields in the NPOI table
+        foreach( var dupeField in npoiFields
+                                .GroupBy( n => n, n => n, ( n, e ) => new { NpoiField = n, Count = e.Count() } )
+                                .Where( x => x.Count > 1 ) )
+        {
+            Logger?.DuplicateNpoiField( dupeField.NpoiField );
+            retVal = false;
+        }
+
+        // update mappings
+        if( retVal )
+        {
+            for( var colIdx = 0; colIdx < npoiFields.Count; colIdx++ )
             {
-                Logger?.BadHeaderName( context.SheetName, colNum, column.ColumnNameInSheet, cell.StringCellValue );
-                return false;
+                var mappedCol = _columns.FirstOrDefault(
+                    c => c.ColumnNameInSheet.Equals(npoiFields[colIdx], StringComparison.OrdinalIgnoreCase ) );
+
+                if( mappedCol != null )
+                    mappedCol.ColumnNumber = colIdx;
             }
         }
 
-        if( matchedColumns == _columns.Count )
-            return true;
-
-        Logger?.HeaderCountMismatch( _columns.Count, matchedColumns );
-        return false;
-    }
-
-    #region column mappings
-
-    public void AddMapping(
-        int colNum,
-        string colNameInSheet,
-        Expression<Func<TEntity, double>> propExpr
-    ) =>
-        AddMappingInternal( colNum,
-                            new ImportedColumn<TEntity, double>( colNum, colNameInSheet, propExpr, LoggerFactory ) );
-
-    public void AddMapping(
-        int colNum,
-        string colNameInSheet,
-        Expression<Func<TEntity, int>> propExpr
-    ) =>
-        AddMappingInternal( colNum,
-                            new ImportedColumn<TEntity, int>( colNum, colNameInSheet, propExpr, LoggerFactory ) );
-
-    public void AddMapping(
-        int colNum,
-        string colNameInSheet,
-        Expression<Func<TEntity, bool>> propExpr
-    ) =>
-        AddMappingInternal( colNum,
-                            new ImportedColumn<TEntity, bool>( colNum, colNameInSheet, propExpr, LoggerFactory ) );
-
-    public void AddMapping(
-        int colNum,
-        string colNameInSheet,
-        Expression<Func<TEntity, DateTime>> propExpr
-    ) =>
-        AddMappingInternal( colNum,
-                            new ImportedColumn<TEntity, DateTime>( colNum, colNameInSheet, propExpr, LoggerFactory ) );
-
-    public void AddMapping(
-        int colNum,
-        string colNameInSheet,
-        Expression<Func<TEntity, string?>> propExpr
-    ) =>
-        AddMappingInternal( colNum,
-                            new ImportedColumn<TEntity, string?>( colNum, colNameInSheet, propExpr, LoggerFactory ) );
-
-    private void AddMappingInternal(
-        int colNum,
-        IImportedColumn mapping
-    )
-    {
-        if( colNum < 0 )
+        foreach( var column in _columns )
         {
-            Logger?.InvalidPropertyValue( "column number", colNum );
-            return;
+            if( column.ColumnNumber >= 0 )
+                continue;
+
+            Logger?.UnmappedNpoiField( column.ColumnNameInSheet );
+            retVal = false;
         }
 
-        if( _columns.TryGetValue( colNum, out _ ) )
-        {
-            Logger?.ReplacedDuplicate( "import column mapping for column", colNum.ToString() );
-            _columns[ colNum ] = mapping;
-        }
-        else _columns.Add( colNum, mapping );
+        return retVal;
     }
-
-    #endregion
 
     protected virtual bool Initialize() => true;
 
