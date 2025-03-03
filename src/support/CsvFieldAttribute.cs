@@ -2,10 +2,10 @@
 
 [ AttributeUsage( AttributeTargets.Property ) ]
 public class CsvFieldAttribute(
-    string csvHeader,
+    string csvFieldName,
     Type? converterType = null
 ) : Attribute
 {
-    public string CsvHeader { get; } = csvHeader;
+    public string CsvFieldName { get; } = csvFieldName;
     public Type? ConverterType { get; } = converterType;
 }
