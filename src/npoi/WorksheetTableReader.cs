@@ -14,7 +14,7 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
     private readonly List<IImportedColumn> _columns = [];
 
     public WorksheetTableReader(
-        IEnumerable<INpoiConverter> converters,
+        IEnumerable<INpoiConverter>? converters = null,
         ILoggerFactory? loggerFactory = null
     )
     {
@@ -24,11 +24,11 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
         CreateColumnMappings(converters, loggerFactory);
     }
 
-    private void CreateColumnMappings(IEnumerable<INpoiConverter> converters, ILoggerFactory? loggerFactory )
+    private void CreateColumnMappings(IEnumerable<INpoiConverter>? converters, ILoggerFactory? loggerFactory )
     {
         var builtInConverters = new Dictionary<Type, INpoiConverter>();
 
-        foreach (var builtIn in converters)
+        foreach (var builtIn in converters ?? [])
         {
             if (builtInConverters.TryGetValue(builtIn.TargetType, out var _))
             {
@@ -44,12 +44,12 @@ public class WorksheetTableReader<TEntity, TContext> : IWorksheetTableReader<TEn
         foreach (var mappingInfo in typeof(TEntity).GetProperties()
                                                      .Where(p => p is { CanRead: true, CanWrite: true }
                                                               && p.GetSetMethod() != null
-                                                              && p.GetCustomAttribute<NpoiMappingAttribute>() != null)
+                                                              && p.GetCustomAttribute<NpoiFieldAttribute>() != null)
                                                      .Select(p => new
                                                      {
                                                          PropertyInfo = p,
                                                          NpoiAttribute =
-                                                              p.GetCustomAttribute<NpoiMappingAttribute>()!
+                                                              p.GetCustomAttribute<NpoiFieldAttribute>()!
                                                      }))
         {
             var converterType = mappingInfo.NpoiAttribute.ConverterType;
