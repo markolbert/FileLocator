@@ -1,10 +1,10 @@
 ﻿namespace J4JSoftware.FileUtilities;
 
-public class ImportContext( params string[] fieldsToIgnore )
+public class ImportContext
 {
     public Stream? ImportStream { get; set; }
 
     public bool HasHeaders { get; set; }
     public string? ReplacementsPath { get; set; }
-    public virtual string[] FieldsToIgnore { get; } = fieldsToIgnore;
+    public virtual string[] PropertiesToIgnore { get; } = [];
 }

@@ -32,7 +32,7 @@ public static class Extensions
         return false;
     }
 
-    public static ClassMap CreateClassMap( Type entityType, ILoggerFactory? loggerFactory )
+    public static ClassMap CreateClassMap( ImportContext context, Type entityType, ILoggerFactory? loggerFactory )
     {
         var defaultMapType = typeof( DefaultClassMap<> ).MakeGenericType( entityType );
 
@@ -50,20 +50,17 @@ public static class Extensions
                                             ex );
         }
 
-        // grab any properties we're supposed to exclude from the map we're building
-        var excluded = entityType.GetCustomAttribute<CsvExcludedAttribute>();
-
         foreach( var propInfo in entityType.GetProperties() )
         {
-            if( excluded?.ExcludedProperties.Any( ep => ep.Equals( propInfo.Name, StringComparison.OrdinalIgnoreCase ) )
-            ?? false )
+            // skip any fields we're supposed to ignore
+            if( context.PropertiesToIgnore.Any( ep => ep.Equals( propInfo.Name, StringComparison.OrdinalIgnoreCase ) ) )
                 continue;
 
             var attr = propInfo.GetCustomAttribute<CsvFieldAttribute>();
             if( attr == null )
                 continue;
 
-            var propMap = classMap.Map( entityType, propInfo ).Name( attr.CsvHeader );
+            var propMap = classMap.Map( entityType, propInfo ).Name( attr.CsvFieldName );
 
             if( attr.ConverterType != null && attr.TryCreateConverter( out var converter, loggerFactory ) )
                 propMap.TypeConverter( converter! );

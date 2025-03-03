@@ -37,7 +37,7 @@ public class CsvTableReader<TEntity>( ILoggerFactory? loggerFactory = null )
         if( !base.BeginGetData( context ) )
             return false;
 
-        if( !InitializeClassMap() )
+        if( !InitializeClassMap( context ) )
             return false;
 
         try
@@ -74,7 +74,7 @@ public class CsvTableReader<TEntity>( ILoggerFactory? loggerFactory = null )
         OnReadingEnded();
     }
 
-    private bool InitializeClassMap()
+    private bool InitializeClassMap( ImportContext context )
     {
         var defaultMapType = typeof( DefaultClassMap<> ).MakeGenericType( ImportedType );
 
@@ -88,20 +88,17 @@ public class CsvTableReader<TEntity>( ILoggerFactory? loggerFactory = null )
             return false;
         }
 
-        // grab any properties we're supposed to exclude from the map we're building
-        var excluded = ImportedType.GetCustomAttribute<CsvExcludedAttribute>();
-
         foreach( var propInfo in ImportedType.GetProperties() )
         {
-            if( excluded?.ExcludedProperties.Any( ep => ep.Equals( propInfo.Name, StringComparison.OrdinalIgnoreCase ) )
-            ?? false )
+            // skip fields that we're supposed to ignore
+            if( context.PropertiesToIgnore.Any( ep => ep.Equals( propInfo.Name, StringComparison.OrdinalIgnoreCase ) ) )
                 continue;
 
             var attr = propInfo.GetCustomAttribute<CsvFieldAttribute>();
             if( attr == null )
                 continue;
 
-            var propMap = _classMap.Map( ImportedType, propInfo ).Name( attr.CsvHeader );
+            var propMap = _classMap.Map( ImportedType, propInfo ).Name( attr.CsvFieldName );
 
             if( attr.ConverterType != null
             && attr.TryCreateConverter( out var converter, LoggerFactory )
