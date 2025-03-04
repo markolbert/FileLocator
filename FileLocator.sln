@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35818.85
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileUtilities", "src\FileUtilities.csproj", "{4C66A11A-1356-66A4-22E6-F6EA07DFE53F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FileUtilities", "src\FileLocator.csproj", "{4C66A11A-1356-66A4-22E6-F6EA07DFE53F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "externals", "externals", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
