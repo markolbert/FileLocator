@@ -1,8 +1,12 @@
-# File Utilities: Overview
+# File Locator
 
-This library simplifies the *reading* of CSV, JSON and Excel streams and the *writing* of JSON and Excel files which contain tabular data.
+This library includes methods for searching directories for files, and ensuring, if necessary, that they can be written.
 
-It also includes methods for searching directories for files, and ensuring, if necessary, that they can be written.
+This library requires Net9 and has nullability enabled.
+
+You can find the library's GitHub repository [here]().
+
+The change log is available [here](docs/changes.md).
 
 ## Dedication
 
