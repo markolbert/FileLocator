@@ -4,7 +4,7 @@ This library includes methods for searching directories for files, and ensuring,
 
 This library requires Net9 and has nullability enabled.
 
-You can find the library's GitHub repository [here]().
+You can find the library's GitHub repository [here](https://github.com/markolbert/FileLocator).
 
 The change log is available [here](docs/changes.md).
 
